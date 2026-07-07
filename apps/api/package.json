@@ -1,0 +1,36 @@
+{
+  "name": "@savemony/api",
+  "private": true,
+  "version": "1.0.2",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev src/index.ts",
+    "deploy": "wrangler deploy",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 migrations apply savemony-db --local",
+    "db:migrate:prod": "wrangler d1 migrations apply savemony-db",
+    "db:studio": "drizzle-kit studio",
+    "lint": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev2": "wrangler dev src/index.ts --local",
+    "deploy2": "wrangler deploy src/index.ts",
+    "db:drop": "drizzle-kit drop",
+    "db:check": "drizzle-kit check"
+  },
+  "dependencies": {
+    "@savemony/shared": "workspace:*",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.12.28",
+    "valibot": "1.4.2",
+    "@hono/standard-validator": "0.2.3",
+    "@node-rs/argon2": "2.0.2"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260706.1",
+    "drizzle-kit": "0.31.10",
+    "typescript": "~6.0.3",
+    "vitest": "4.1.10",
+    "wrangler": "4.107.0"
+  }
+}

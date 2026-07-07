@@ -1,0 +1,18 @@
+name = "savemony-api"
+compatibility_date = "2026-07-04"
+main = "src/index.ts"
+
+# Replace <DATABASE_ID> with your real D1 database ID after creating it
+[[d1_databases]]
+binding = "DB"
+database_name = "savemony-db"
+database_id = "<DATABASE_ID>"
+migrations_dir = "./migrations"
+
+[vars]
+ENVIRONMENT = "production"
+APP_URL = "https://panel.tu-dominio.com"
+
+# The GEMINI_API_KEY should be set via:
+#   wrangler secret put GEMINI_API_KEY
+# Do NOT paste secrets in this file.

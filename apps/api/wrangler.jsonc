@@ -1,0 +1,17 @@
+{
+  "name": "savemony-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-04", // Fecha actual para usar las últimas características de Workers
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "savemony-db",
+      "database_id": "local",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "development",
+    "APP_URL": "http://localhost:5173"
+  }
+}
