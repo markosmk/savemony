@@ -1,0 +1,30 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Monorepo / pnpm
+.pnpm-debug.log*
+.pnpm-store/
+
+# Drizzle
+migrations/
+*.sqlite
+*.sqlite3
+
+# Cloudflare Workers
+.wrangler/
+wrangler.toml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
