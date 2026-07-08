@@ -1,26 +1,17 @@
 import { sValidator } from "@hono/standard-validator";
-import { loginSchema, profileSchema, sessionRevokeSchema } from "@savemony/shared";
+import { loginSchema, profileSchema, registerSchema, sessionRevokeSchema } from "@savemony/shared";
 import { eq } from "drizzle-orm";
-import { Hono } from "hono";
 import { getCookie } from "hono/cookie";
-import * as v from "valibot";
 
 import { getDB } from "../db";
 import { referral, session, user } from "../db/schemas";
 import { hashPassword, verifyPassword } from "../lib/hash";
-import type { Variables } from "../middlewares/auth";
+import { createPublicRouter } from "../lib/hono";
 import { authMiddleware, createSession, revokeSession } from "../middlewares/auth";
 
-const registerSchema = v.object({
-  email: v.pipe(v.string(), v.email("Formato de email inválido")),
-  password: v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres")),
-  name: v.optional(v.string()),
-  referredBy: v.optional(v.string()),
-});
+const routes = createPublicRouter();
 
-const app = new Hono<{ Bindings: { DB: D1Database }; Variables: Variables }>();
-
-app.post("/register", sValidator("json", registerSchema), async (c) => {
+routes.post("/register", sValidator("json", registerSchema), async (c) => {
   try {
     const { email, password, name, referredBy } = c.req.valid("json");
     const db = getDB(c.env.DB);
@@ -62,7 +53,7 @@ app.post("/register", sValidator("json", registerSchema), async (c) => {
   }
 });
 
-app.post("/login", sValidator("json", loginSchema), async (c) => {
+routes.post("/login", sValidator("json", loginSchema), async (c) => {
   try {
     const { email, password } = c.req.valid("json");
 
@@ -90,7 +81,7 @@ app.post("/login", sValidator("json", loginSchema), async (c) => {
   }
 });
 
-app.post("/logout", async (c) => {
+routes.post("/logout", async (c) => {
   const token = getCookie(c, "session");
   if (token) {
     await revokeSession(c, token);
@@ -98,7 +89,7 @@ app.post("/logout", async (c) => {
   return c.json({ success: true });
 });
 
-app.get("/me", authMiddleware, async (c) => {
+routes.get("/me", authMiddleware, async (c) => {
   const user = c.get("user");
   const sessionId = c.get("sessionId");
   return c.json({
@@ -106,7 +97,7 @@ app.get("/me", authMiddleware, async (c) => {
   });
 });
 
-app.put("/profile", authMiddleware, sValidator("json", profileSchema), async (c) => {
+routes.put("/profile", authMiddleware, sValidator("json", profileSchema), async (c) => {
   try {
     const userSession = c.get("user");
     const { name, email, currentPassword, newPassword } = c.req.valid("json");
@@ -139,7 +130,7 @@ app.put("/profile", authMiddleware, sValidator("json", profileSchema), async (c)
   }
 });
 
-app.get("/sessions/:userId", authMiddleware, async (c) => {
+routes.get("/sessions/:userId", authMiddleware, async (c) => {
   const userId = c.req.param("userId");
   if (!userId) {
     return c.json({ error: "ID de usuario requerido" }, 400);
@@ -149,7 +140,7 @@ app.get("/sessions/:userId", authMiddleware, async (c) => {
   return c.json(list);
 });
 
-app.post("/sessions/revoke", authMiddleware, sValidator("json", sessionRevokeSchema), async (c) => {
+routes.post("/sessions/revoke", authMiddleware, sValidator("json", sessionRevokeSchema), async (c) => {
   try {
     const { sessionId } = c.req.valid("json") as { sessionId: string };
     const db = getDB(c.env.DB);
@@ -161,4 +152,6 @@ app.post("/sessions/revoke", authMiddleware, sValidator("json", sessionRevokeSch
   }
 });
 
-export default app;
+// TODO: restore password..
+
+export default routes;
