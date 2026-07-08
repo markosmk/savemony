@@ -1,5 +1,7 @@
 // import { hash, compare } from "bcryptjs";
 
+import { encodeBase64 } from "hono/utils/encode";
+
 // export async function hashPassword(password: string) {
 //   return await hash(password, 10);
 // }
@@ -78,4 +80,12 @@ export async function verifyPassword(password: string, storedHash: string): Prom
     result |= attemptHash[i] ^ originalHash[i];
   }
   return result === 0;
+}
+
+// never save tokens directly on DB,
+export async function hashToken(token: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(token);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return encodeBase64(hashBuffer);
 }
