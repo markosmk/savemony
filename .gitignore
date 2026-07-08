@@ -22,7 +22,6 @@ wrangler.toml
 
 # IDE
 .idea/
-.vscode/
 *.swp
 *.swo
 

@@ -1,74 +1,103 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
-  "vcs": {
-    "enabled": false,
-    "clientKind": "git",
-    "useIgnoreFile": false
-  },
-  "formatter": {
-    "enabled": true,
-    "formatWithErrors": false,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineEnding": "lf",
-    "lineWidth": 120,
-    "attributePosition": "auto"
-  },
-  "linter": {
-    "enabled": true,
-    "rules": {
-      "preset": "recommended",
-      "suspicious": {
-        "noArrayIndexKey": "off"
-      }
-    }
-  },
-  "javascript": {
-    "formatter": {
-      "jsxQuoteStyle": "double",
-      "quoteProperties": "asNeeded",
-      "trailingCommas": "all",
-      "semicolons": "always",
-      "arrowParentheses": "always",
-      "bracketSpacing": true,
-      "bracketSameLine": false,
-      "attributePosition": "auto"
-    }
-  },
-  "assist": {
-    "enabled": true,
-    "actions": {
-      "source": {
-        "organizeImports": {
-          "level": "on",
-          "options": {
-            "groups": [
-              { "source": ["react", "react-dom", "react-native"] },
-              { "source": ["**", "!@/**", "!./**", "!../**", "!react", "!react-dom", "!react-native"] },
-              ":BLANK_LINE:",
-              { "source": ["@/**", "./**", "../**"] },
-              ":BLANK_LINE:",
-              { "type": true, "source": ["@/**", "./**", "../**"] }
-            ],
-            "identifierOrder": "natural"
-          }
-        }
-      }
-    }
-  },
-  "overrides": [
-    {
-      "formatter": {
-        "indentWidth": 2
-      }
-    }
-  ],
-  "files": {
-    "ignoreUnknown": true
-  },
-  "css": {
-    "parser": {
-      "tailwindDirectives": true
-    }
-  }
+	"$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+	"vcs": {
+		"enabled": false,
+		"clientKind": "git",
+		"useIgnoreFile": false
+	},
+	"formatter": {
+		"enabled": true,
+		"formatWithErrors": false,
+		"indentStyle": "space",
+		"indentWidth": 2,
+		"lineEnding": "lf",
+		"lineWidth": 120,
+		"attributePosition": "auto"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"suspicious": {
+				"noArrayIndexKey": "off"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"jsxQuoteStyle": "double",
+			"quoteProperties": "asNeeded",
+			"trailingCommas": "all",
+			"semicolons": "always",
+			"arrowParentheses": "always",
+			"bracketSpacing": true,
+			"bracketSameLine": false,
+			"attributePosition": "auto"
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": {
+					"level": "on",
+					"options": {
+						"groups": [
+							{
+								"source": [
+									"react",
+									"react-dom",
+									"react-native"
+								]
+							},
+							{
+								"source": [
+									"**",
+									"!@/**",
+									"!./**",
+									"!../**",
+									"!react",
+									"!react-dom",
+									"!react-native"
+								]
+							},
+							":BLANK_LINE:",
+							{
+								"source": [
+									"@/**",
+									"./**",
+									"../**"
+								]
+							},
+							":BLANK_LINE:",
+							{
+								"type": true,
+								"source": [
+									"@/**",
+									"./**",
+									"../**"
+								]
+							}
+						],
+						"identifierOrder": "natural"
+					}
+				}
+			}
+		}
+	},
+	"overrides": [
+		{
+			"formatter": {
+				"indentWidth": 2
+			}
+		}
+	],
+	"files": {
+		"ignoreUnknown": true
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	}
 }
