@@ -36,6 +36,7 @@ app.use("*", secureHeaders());
 // Rate limiting: auth stricter, webhooks permissive, general protected
 app.use("/api/auth/login", rateLimit({ windowMs: 60_000, max: 5 }));
 app.use("/api/*", rateLimit({ windowMs: 60_000, max: 100 }));
+app.use("/api/auth/forgot-password", rateLimit({ windowMs: 60_000, max: 5 }));
 
 // Mount modular routes
 app.route("/api/auth", authRoutes);
