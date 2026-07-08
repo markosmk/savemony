@@ -3,11 +3,13 @@ import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 
 import { rateLimit } from "./middlewares/rate-limit";
+import accountRoutes from "./routes/account";
 import achievementRoutes from "./routes/achievements";
 import authRoutes from "./routes/auth";
 import cellsRoutes from "./routes/cells";
 import challengesRouter from "./routes/challenges";
 import plansRoutes from "./routes/plans";
+import settingsRoutes from "./routes/settings";
 import statsRouter from "./routes/stats";
 import timelineRoutes from "./routes/timeline";
 import { AppError } from "./types";
@@ -37,6 +39,8 @@ app.use("/api/*", rateLimit({ windowMs: 60_000, max: 100 }));
 
 // Mount modular routes
 app.route("/api/auth", authRoutes);
+app.route("/api/account", accountRoutes);
+app.route("/api/settings", settingsRoutes);
 app.route("/api/plans", plansRoutes);
 app.route("/api/cells", cellsRoutes);
 app.route("/api/timeline", timelineRoutes);

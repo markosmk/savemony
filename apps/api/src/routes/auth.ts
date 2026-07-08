@@ -1,5 +1,5 @@
 import { sValidator } from "@hono/standard-validator";
-import { loginSchema, profileSchema, registerSchema, sessionRevokeSchema } from "@savemony/shared";
+import { loginSchema, registerSchema, sessionRevokeSchema } from "@savemony/shared";
 import { eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 
@@ -95,39 +95,6 @@ routes.get("/me", authMiddleware, async (c) => {
   return c.json({
     user: { id: user.id, email: user.email, name: user.name, role: user.role, currentSessionId: sessionId },
   });
-});
-
-routes.put("/profile", authMiddleware, sValidator("json", profileSchema), async (c) => {
-  try {
-    const userSession = c.get("user");
-    const { name, email, currentPassword, newPassword } = c.req.valid("json");
-    const db = getDB(c.env.DB);
-    const userDB = await db.select().from(user).where(eq(user.id, userSession.id)).get();
-    if (!userDB?.passwordHash) {
-      return c.json({ error: "Usuario no encontrado" }, 404);
-    }
-
-    if (currentPassword) {
-      const valid = await verifyPassword(currentPassword, userDB.passwordHash);
-      if (!valid) {
-        return c.json({ error: "Contraseña actual incorrecta" }, 403);
-      }
-    }
-
-    const updates: { name?: string; email?: string; passwordHash?: string } = {};
-    if (name) updates.name = name;
-    if (email) updates.email = email;
-    if (newPassword) updates.passwordHash = await hashPassword(newPassword);
-
-    const updated = await db.update(user).set(updates).where(eq(user.id, userSession.id)).returning().get();
-
-    return c.json({
-      user: { id: updated?.id, email: updated?.email, name: updated?.name, role: updated?.role },
-    });
-  } catch (err: unknown) {
-    console.error("Profile update error:", err);
-    return c.json({ error: "Error interno del servidor. Intenta más tarde." }, 500);
-  }
 });
 
 routes.get("/sessions/:userId", authMiddleware, async (c) => {
