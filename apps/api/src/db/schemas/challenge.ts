@@ -1,0 +1,42 @@
+import { sql } from "drizzle-orm";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+
+import { user } from "./auth";
+
+export const challenge = sqliteTable("challenge", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  key: text("key").notNull().unique(), // ej: 'week_streak', 'save_50k'
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  icon: text("icon").notNull().default("🏆"),
+  type: text("type").notNull(), // 'streak', 'amount', 'cells', 'no_spend', 'referral'
+  targetValue: integer("target_value").notNull(),
+  durationDays: integer("duration_days"), // null = ilimitado
+  rewardPoints: integer("reward_points").notNull().default(0),
+  isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+});
+
+export const userChallenge = sqliteTable(
+  "user_challenges",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    challengeId: text("challenge_id")
+      .notNull()
+      .references(() => challenge.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("active"), // 'active', 'completed', 'failed', 'cancelled'
+    currentProgress: integer("current_progress").notNull().default(0),
+    startedAt: text("started_at").default(sql`CURRENT_TIMESTAMP`),
+    completedAt: text("completed_at"),
+    expiresAt: text("expires_at"), // ISO string si tenía duration_days
+    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [uniqueIndex("user_challenge_unique_idx").on(table.userId, table.challengeId)],
+);
