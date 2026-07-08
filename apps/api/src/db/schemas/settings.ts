@@ -3,7 +3,7 @@ import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 
-export const profile = sqliteTable("profile", {
+export const settings = sqliteTable("settings", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -25,5 +25,6 @@ export const profile = sqliteTable("profile", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export type Profile = typeof profile.$inferSelect;
-export type NewProfile = typeof profile.$inferInsert;
+export type Settings = typeof settings.$inferSelect;
+export type SettingsInsert = typeof settings.$inferInsert;
+export type SettingsUpdate = Omit<SettingsInsert, "id" | "userId" | "createdAt" | "updatedAt">;
