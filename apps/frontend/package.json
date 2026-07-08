@@ -42,7 +42,8 @@
     "vaul": "1.1.2",
     "react-markdown": "^10.1.0",
     "@reactuses/core": "6.4.0",
-    "recharts": "3.9.2"
+    "recharts": "3.9.2",
+    "react-day-picker": "10.0.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.2",
