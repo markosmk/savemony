@@ -22,8 +22,6 @@ export type SessionRevokeInput = v.InferOutput<typeof sessionRevokeSchema>;
 export const profileUpdateSchema = v.object({
   name: v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres.")),
   email: v.pipe(v.string(), v.email()),
-  // currentPassword: v.optional(v.string()),
-  // newPassword: v.optional(v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres."))),
 });
 export type ProfileUpdateInput = v.InferOutput<typeof profileUpdateSchema>;
 
