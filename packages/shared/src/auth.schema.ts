@@ -19,6 +19,13 @@ export const sessionRevokeSchema = v.object({
 });
 export type SessionRevokeInput = v.InferOutput<typeof sessionRevokeSchema>;
 
+export const confirmEmailSchema = v.object({ token: v.string() });
+export const forgotPasswordSchema = v.object({ email: v.pipe(v.string(), v.email()) });
+export const resetPasswordSchema = v.object({
+  token: v.string(),
+  newPassword: v.pipe(v.string(), v.minLength(6)),
+});
+
 export const profileUpdateSchema = v.object({
   name: v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres.")),
   email: v.pipe(v.string(), v.email()),
