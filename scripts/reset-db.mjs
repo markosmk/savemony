@@ -10,7 +10,7 @@
  * 5. Levanta la API final
  * 6. Hace POST a /setup para seedear datos iniciales
  *
- * Uso: node scripts/reset-db.js
+ * Uso: node scripts/reset-db.mjs
  */
 
 import { execSync, spawn } from "node:child_process";
@@ -73,7 +73,9 @@ const main = async () => {
 
   // ── 0. Matar posibles procesos huérfanos previos en el puerto 8787/8788 ──
   try {
-    execSync("npx kill-port 8787 8788", { stdio: "ignore" });
+    // execSync("npx --yes kill-port 8787 8788", { stdio: "ignore" });
+    // Busca los procesos en esos puertos y los mata al instante, solo Mac/Linux
+    execSync("lsof -t -i:8787 -i:8788 | xargs -r kill -9", { stdio: "ignore" });
   } catch {}
 
   // ── 1. Limpiar ──
@@ -119,10 +121,9 @@ const main = async () => {
 
   // ── 4. Aplicar migraciones ──
   console.log("\n📦 Paso 4/5: Aplicando migraciones a D1 local...");
-  run("pnpm run db:migrate", ROOT);
+  run("CI=true pnpm run db:migrate", ROOT);
 
   // ── 5. Aplicar Seed (opcional) ──
-  /*
   console.log("\n📦 Paso 5/5: Aplicando seed de datos...");
 
   // iniciamos de nuevo la API en segundo plano
@@ -144,7 +145,6 @@ const main = async () => {
   } finally {
     killProcessTree(apiSeed);
   }
-	*/
 
   console.log("\n═══════════════════════════════════════════════");
   console.log("  ✨ ¡TODO LISTO Y LIMPIO!");
