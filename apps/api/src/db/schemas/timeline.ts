@@ -18,7 +18,9 @@ export const timeline = sqliteTable(
     amount: real("amount"),
     description: text("description"),
     metadata: text("metadata"),
-    date: text("date").notNull().default(sql`CURRENT_TIMESTAMP`),
+    // (Tiempo Lógico/del Usuario): Es la fecha real en la que ocurrió el evento. el usuario lo puede cargar manual, ej: un type = note
+    date: text("date"),
+    // (Tiempo del Sistema): Es la fecha inamovible en la que la base de datos hizo el INSERT. Es puramente para auditoría técnica.
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [index("idx_timeline_plan_id").on(table.planId), index("idx_timeline_date").on(table.date)],

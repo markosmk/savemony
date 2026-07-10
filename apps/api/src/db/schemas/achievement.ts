@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import {sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 
@@ -10,7 +10,6 @@ export const achievement = sqliteTable("achievement", {
   key: text("key").notNull().unique(),
   title: text("title").notNull(),
   description: text("description").notNull(),
-  icon: text("icon").notNull(),
   condition: text("condition").notNull(),
 });
 

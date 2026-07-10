@@ -10,7 +10,6 @@ export const challenge = sqliteTable("challenge", {
   key: text("key").notNull().unique(), // ej: 'week_streak', 'save_50k'
   title: text("title").notNull(),
   description: text("description").notNull(),
-  icon: text("icon").notNull().default("🏆"),
   type: text("type").notNull(), // 'streak', 'amount', 'cells', 'no_spend', 'referral'
   targetValue: integer("target_value").notNull(),
   durationDays: integer("duration_days"), // null = ilimitado
@@ -40,3 +39,14 @@ export const userChallenge = sqliteTable(
   },
   (table) => [uniqueIndex("user_challenge_unique_idx").on(table.userId, table.challengeId)],
 );
+
+export type ChallengeSelect = typeof challenge.$inferSelect;
+export type ChallengeInsert = typeof challenge.$inferInsert;
+export type ChallengeUpdate = Omit<ChallengeInsert, "id" | "createdAt" | "updatedAt">;
+
+export type UserChallengeSelect = typeof userChallenge.$inferSelect;
+export type UserChallengeInsert = typeof userChallenge.$inferInsert;
+export type UserChallengeUpdate = Omit<
+  UserChallengeInsert,
+  "id" | "userId" | "challengeId" | "startedAt" | "completedAt" | "expiresAt" | "updatedAt"
+>;
