@@ -1,5 +1,11 @@
 import { sValidator } from "@hono/standard-validator";
-import { createPlanSchema, timelineEntrySchema, updatePlanSchema } from "@savemony/shared";
+import {
+  createPlanSchema,
+  type PlanDetailDTO,
+  type PlanDTO,
+  timelineEntrySchema,
+  updatePlanSchema,
+} from "@savemony/shared";
 import { and, eq, sql } from "drizzle-orm";
 
 import { getDB } from "../db";
@@ -9,33 +15,23 @@ import { generateGrid, rebalanceCells } from "../services/plans.utils";
 
 const routes = createProtectedRouter();
 
-// ========== GET /plans/user ==========
-routes.get("/user", async (c) => {
+// ========== GET /plans ==========
+routes.get("/", async (c) => {
   const user = c.get("user");
   const db = getDB(c.env.DB);
 
   const userPlans = await db
     .select({
       id: plan.id,
-      userId: plan.userId,
       title: plan.title,
       description: plan.description,
+      category: plan.category,
       targetAmount: plan.targetAmount,
       currentAmount: plan.currentAmount,
       method: plan.method,
-      gridRows: plan.gridRows,
-      gridCols: plan.gridCols,
-      rebalanceMode: plan.rebalanceMode,
-      frequency: plan.frequency,
-      minAmount: plan.minAmount,
-      maxAmount: plan.maxAmount,
-      deadline: plan.deadline,
       status: plan.status,
       streak: plan.streak,
-      category: plan.category,
-      archived: plan.archived,
       createdAt: plan.createdAt,
-      updatedAt: plan.updatedAt,
       totalCells: sql<number>`CAST(count(${cell.id}) AS INTEGER)`,
       completedCells: sql<number>`CAST(sum(case when ${cell.status} = 'completed' then 1 else 0 end) AS INTEGER)`,
     })
@@ -45,7 +41,13 @@ routes.get("/user", async (c) => {
     .groupBy(plan.id)
     .all();
 
-  return c.json(userPlans);
+  const plansWithProgress = userPlans.map((p) => ({
+    ...p,
+    progressPercent: p.targetAmount > 0 ? Math.round((p.currentAmount / p.targetAmount) * 100) : 0,
+  }));
+
+  //
+  return c.json<PlanDTO[]>(plansWithProgress);
 });
 
 // ========== GET /plans/:id ==========
@@ -54,30 +56,61 @@ routes.get("/:id", async (c) => {
   const id = c.req.param("id");
   const db = getDB(c.env.DB);
 
-  const planData = await db
-    .select()
-    .from(plan)
-    .where(and(eq(plan.id, id), eq(plan.userId, user.id)))
-    .get();
+  const planData = await db.query.plan.findFirst({
+    where: and(eq(plan.id, id), eq(plan.userId, user.id)),
+    columns: {
+      id: true,
+      title: true,
+      description: true,
+      category: true,
+      targetAmount: true,
+      currentAmount: true,
+      method: true,
+      status: true,
+      gridCols: true,
+      gridRows: true,
+      streak: true,
+      lastSaveDate: true,
+      archived: true,
+      deadline: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    with: {
+      cells: {
+        orderBy: (cells, { asc }) => [asc(cells.position)],
+        columns: {
+          id: true,
+          position: true,
+          amount: true,
+          status: true,
+          completedAt: true,
+          isLockedAmount: true,
+        },
+      },
+      timelines: {
+        orderBy: (timelines, { desc }) => [desc(timelines.createdAt)],
+        limit: 1,
+        columns: {
+          id: true,
+          description: true,
+          type: true,
+          amount: true,
+          date: true,
+          metadata: true,
+          createdAt: true,
+        },
+      },
+    },
+  });
 
   if (!planData) return c.json({ success: false, error: "Plan no encontrado" }, 404);
 
-  const cellsData = await db.select().from(cell).where(eq(cell.planId, id)).orderBy(cell.position).all();
-
-  const timelineData = await db
-    .select()
-    .from(timeline)
-    .where(eq(timeline.planId, id))
-    .orderBy(sql`${timeline.date} desc`)
-    .all();
-
-  return c.json({
-    success: true,
-    plan: {
-      ...planData,
-      cells: cellsData,
-      timeline: timelineData,
-    },
+  return c.json<PlanDetailDTO>({
+    ...planData,
+    completedCells: planData.cells.filter((c) => c.status === "completed").length,
+    totalCells: planData.cells.length,
+    progressPercent: planData.targetAmount > 0 ? Math.round((planData.currentAmount / planData.targetAmount) * 100) : 0,
   });
 });
 
