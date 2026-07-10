@@ -58,31 +58,3 @@ export function parseProviderError(err: unknown): AppError {
     typeof status === "number" ? status : 500,
   );
 }
-
-/**
- * TYPES for APP
- */
-export type SavingsMethod =
-  | "custom_grid"
-  | "52_weeks"
-  | "100_envelopes"
-  | "365_days"
-  | "final_digit"
-  | "no_spend"
-  | "rounding";
-
-export type RebalanceMode = "proportional" | "random" | "manual";
-export type PlanFrequency = "daily" | "weekdays" | "weekly" | "random";
-export type PlanStatus = "active" | "completed" | "paused" | "abandoned" | "archived";
-export type CellStatus = "pending" | "completed" | "locked";
-export type TimelineType = "save" | "withdraw" | "adjust" | "milestone" | "note";
-
-export type BudgetCategory =
-  | "vacaciones"
-  | "emergencia"
-  | "educacion"
-  | "tecnologia"
-  | "hogar"
-  | "salud"
-  | "transporte"
-  | "otro";
