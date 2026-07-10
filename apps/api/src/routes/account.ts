@@ -66,4 +66,12 @@ routes.put("/change-password", sValidator("json", profileUpdatePasswordSchema), 
   }
 });
 
+// DELETE /api/account/me
+// - Borrar sesiones
+// - Borrar settings
+// - Borrar plans (cascade cells, timeline)
+// - Borrar achievements
+// - Borrar user
+// - Invalidar cookie
+
 export default routes;
