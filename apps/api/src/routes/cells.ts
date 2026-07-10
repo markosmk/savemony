@@ -252,24 +252,24 @@ routes.put("/:cellId", sValidator("json", editCellSchema), async (c) => {
     id: c.id,
     amount: c.id === cellId ? data.newAmount : c.amount,
     status: c.status,
-    isLocked: c.id === cellId ? true : Boolean(c.isLocked),
+    isLocked: c.id === cellId ? true : Boolean(c.isLockedAmount),
   }));
 
   const mode = data.rebalanceMode || (planData.rebalanceMode as "proportional" | "random") || "proportional";
 
-  const newAmounts = rebalanceCells(
-    cellsForRebalance,
-    Number(planData.targetAmount),
+  const newAmounts = rebalanceCells({
+    cells: cellsForRebalance,
     mode,
-    Number(planData.minAmount) || 0,
-    Number(planData.maxAmount) || 0,
-  );
+    totalTarget: Number(planData.targetAmount),
+    minAmount: Number(planData.minAmount) || 0,
+    maxAmount: Number(planData.maxAmount) || 0,
+  });
 
   // 4. Actualizar las demás celdas pendientes
   for (const item of newAmounts) {
     if (item.id === cellId) continue;
     const original = allCells.find((c) => c.id === item.id);
-    if (original && original.status === "pending" && !original.isLocked && original.amount !== item.amount) {
+    if (original && original.status === "pending" && !original.isLockedAmount && original.amount !== item.amount) {
       await db.update(cell).set({ amount: item.amount }).where(eq(cell.id, item.id));
     }
   }

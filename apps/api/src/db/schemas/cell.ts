@@ -14,8 +14,8 @@ export const cell = sqliteTable(
       .references(() => plan.id, { onDelete: "cascade" }),
     position: integer("position").notNull(),
     amount: real("amount").notNull(),
-    status: text("status").notNull().default("pending"),
-    isLocked: integer("is_locked").notNull().default(0),
+    status: text("status").notNull().default("pending"), // "pending" | "completed" | "locked"
+    isLockedAmount: integer("is_locked_amount").notNull().default(0),
     completedAt: text("completed_at"),
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
