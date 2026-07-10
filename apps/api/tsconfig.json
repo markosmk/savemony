@@ -1,18 +1,25 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "isolatedModules": true,
-    "allowSyntheticDefaultImports": true,
-    "types": ["@cloudflare/workers-types"],
-    "paths": {
-      "@savemony/shared": ["../../packages/shared/src/index.ts"]
-    }
-  },
-  "include": ["src/**/*"]
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"allowSyntheticDefaultImports": true,
+		"types": [
+			"@cloudflare/workers-types",
+			"@cloudflare/vitest-pool-workers"
+		],
+		"paths": {
+			"@savemony/shared": [
+				"../../packages/shared/src/index.ts"
+			]
+		}
+	},
+	"include": [
+		"src/**/*"
+	]
 }
