@@ -16,7 +16,6 @@ routes.get("/analytics", async (c) => {
     .select({
       id: plan.id,
       title: plan.title,
-      icon: plan.icon,
       status: plan.status,
       currentAmount: plan.currentAmount,
       targetAmount: plan.targetAmount,
@@ -116,8 +115,11 @@ routes.get("/prediction/:planId", async (c) => {
   let estimatedDays = null;
 
   if (recentSaves.length >= 2) {
-    const firstDate = new Date(recentSaves[recentSaves.length - 1].date).getTime();
-    const lastDate = new Date(recentSaves[0].date).getTime();
+    const firstMove = recentSaves[recentSaves.length - 1].date;
+    const lastMove = recentSaves[0].date;
+
+    const firstDate = firstMove ? new Date(firstMove).getTime() : 0;
+    const lastDate = lastMove ? new Date(lastMove).getTime() : 0;
     const daysDiff = Math.max(1, (lastDate - firstDate) / (1000 * 60 * 60 * 24));
 
     const totalAmountInPeriod = recentSaves.reduce((sum, t) => sum + Number(t.amount || 0), 0);
