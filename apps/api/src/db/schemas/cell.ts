@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { index, integer, real, sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
 import { plan } from "./plan";
@@ -26,6 +26,13 @@ export const cell = sqliteTable(
     unique("uq_cells_plan_position").on(table.planId, table.position), // duplicated none
   ],
 );
+
+export const cellRelations = relations(cell, ({ one }) => ({
+  plan: one(plan, {
+    fields: [cell.planId],
+    references: [plan.id],
+  }),
+}));
 
 export type Cell = typeof cell.$inferSelect;
 export type CellInsert = typeof cell.$inferInsert;

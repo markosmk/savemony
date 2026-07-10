@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { index, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { cell } from "./cell";
@@ -25,6 +25,13 @@ export const timeline = sqliteTable(
   },
   (table) => [index("idx_timeline_plan_id").on(table.planId), index("idx_timeline_date").on(table.date)],
 );
+
+export const timelineRelations = relations(timeline, ({ one }) => ({
+  plan: one(plan, {
+    fields: [timeline.planId],
+    references: [plan.id],
+  }),
+}));
 
 export type Timeline = typeof timeline.$inferSelect;
 export type TimelineInsert = typeof timeline.$inferInsert;
