@@ -11,12 +11,9 @@ const routes = createProtectedRouter();
 const defaultSettings: Omit<SettingsInsert, "id" | "userId"> = {
   currency: "USD",
   language: "en",
-  defaultMethod: "custom_grid",
   reminderEnabled: 1,
   achievementNotifs: 1,
   weeklySummary: 1,
-  onboardingCompleted: 0,
-  image: "",
   locale: "en",
 } as const;
 
@@ -67,10 +64,8 @@ routes.put("/", sValidator("json", settingsUpdateSchema), async (c) => {
     }
 
     const updates: SettingsUpdate = {
-      name: data.name || "",
       currency: data.currency,
       language: data.language,
-      defaultMethod: data.defaultMethod,
       reminderEnabled: data.reminderEnabled ? 1 : 0,
       achievementNotifs: data.achievementNotifs ? 1 : 0,
       weeklySummary: data.weeklySummary ? 1 : 0,
@@ -78,8 +73,7 @@ routes.put("/", sValidator("json", settingsUpdateSchema), async (c) => {
 
     // Opcionales solo si vienen
     if (data.locale !== undefined) updates.locale = data.locale;
-    if (data.image !== undefined) updates.image = data.image;
-    if (data.onboardingCompleted !== undefined) updates.onboardingCompleted = data.onboardingCompleted ? 1 : 0;
+    // if (data.onboardingCompleted !== undefined) updates.onboardingCompleted = data.onboardingCompleted ? 1 : 0;
 
     const updated = await db.update(settings).set(updates).where(eq(settings.userId, userSession.id)).returning().get();
 
