@@ -15,9 +15,34 @@ routes.get("/user", async (c) => {
   const db = getDB(c.env.DB);
 
   const userPlans = await db
-    .select()
+    .select({
+      id: plan.id,
+      userId: plan.userId,
+      title: plan.title,
+      description: plan.description,
+      targetAmount: plan.targetAmount,
+      currentAmount: plan.currentAmount,
+      method: plan.method,
+      gridRows: plan.gridRows,
+      gridCols: plan.gridCols,
+      rebalanceMode: plan.rebalanceMode,
+      frequency: plan.frequency,
+      minAmount: plan.minAmount,
+      maxAmount: plan.maxAmount,
+      deadline: plan.deadline,
+      status: plan.status,
+      streak: plan.streak,
+      category: plan.category,
+      archived: plan.archived,
+      createdAt: plan.createdAt,
+      updatedAt: plan.updatedAt,
+      totalCells: sql<number>`CAST(count(${cell.id}) AS INTEGER)`,
+      completedCells: sql<number>`CAST(sum(case when ${cell.status} = 'completed' then 1 else 0 end) AS INTEGER)`,
+    })
     .from(plan)
+    .leftJoin(cell, eq(plan.id, cell.planId))
     .where(and(eq(plan.userId, user.id), eq(plan.archived, 0)))
+    .groupBy(plan.id)
     .all();
 
   return c.json(userPlans);
@@ -62,19 +87,99 @@ routes.post("/", sValidator("json", createPlanSchema), async (c) => {
   const user = c.get("user");
   const db = getDB(c.env.DB);
 
+  const rows = data.gridRows ?? 6;
+  const cols = data.gridCols ?? 7;
+  const totalCells = rows * cols;
+  const target = Number(data.targetAmount);
+  const minAmount = Number(data.minAmount) || 0;
+  const maxAmount = Number(data.maxAmount) || 0;
+  const preferredAmounts = (data.preferredAmounts || []).map(Number);
+
+  // ── Validaciones de negocio ───────────────────────────────
+
+  // 1. Mínimo no puede ser mayor que el máximo (si ambos están definidos)
+  if (minAmount > 0 && maxAmount > 0 && minAmount > maxAmount) {
+    return c.json({ error: "El monto mínimo no puede ser mayor que el máximo" }, 400);
+  }
+
+  // 2. Si hay mínimo, el total mínimo posible debe caber en el target
+  if (minAmount > 0) {
+    const minTotalPossible = minAmount * totalCells;
+    if (minTotalPossible > target) {
+      return c.json(
+        {
+          error: `Con ${totalCells} celdas y mínimo de ${minAmount}, el total mínimo es ${minTotalPossible}. Tu meta es ${target}. Reducí el mínimo o aumentá la meta.`,
+        },
+        400,
+      );
+    }
+  }
+
+  // 3. Si hay máximo, el total máximo posible debe alcanzar el target
+  if (maxAmount > 0) {
+    const maxTotalPossible = maxAmount * totalCells;
+    if (maxTotalPossible < target) {
+      return c.json(
+        {
+          error: `Con ${totalCells} celdas y máximo de ${maxAmount}, el total máximo es ${maxTotalPossible}. Tu meta es ${target}. Aumentá el máximo o reducí la meta.`,
+        },
+        400,
+      );
+    }
+  }
+
+  // 4. Validación específica por método
+  if (data.method === "52_weeks" && totalCells !== 52) {
+    return c.json({ error: "El método 52 semanas requiere exactamente 52 celdas (ej: 4×13 o 2×26)" }, 400);
+  }
+  if (data.method === "100_envelopes" && totalCells !== 100) {
+    return c.json({ error: "El método 100 sobres requiere exactamente 100 celdas (10×10)" }, 400);
+  }
+  if (data.method === "3_months" && totalCells !== 90) {
+    return c.json({ error: "El método 3 meses requiere exactamente 90 celdas" }, 400);
+  }
+
   const newPlanId = crypto.randomUUID();
 
   try {
     // 3. Generar montos de celdas
-    const amounts = generateGrid(
-      data.method || "custom_grid",
-      Number(data.targetAmount),
-      data.gridRows || 6,
-      data.gridCols || 7,
-      Number(data.minAmount) || 0,
-      Number(data.maxAmount) || 0,
-      data.frequency || "daily",
-    );
+    const amounts = generateGrid({
+      method: data.method || "custom_grid",
+      target,
+      rows,
+      cols,
+      minAmount,
+      maxAmount,
+      preferredAmounts,
+      roundingMultiple: data.roundingMultiple || 1,
+      amountMode: data.amountMode || "range",
+    });
+
+    // Verificación final: la suma debe ser EXACTAMENTE el target
+    const sum = amounts.reduce((a, b) => a + b, 0);
+    if (sum !== target) {
+      console.error(`[PLAN CREATE] Suma incorrecta: ${sum} vs target ${target}`);
+      return c.json({ error: "Error interno al generar el plan. Intentá de nuevo." }, 500);
+    }
+
+    // Validación de usabilidad: ninguna celda debería ser > 5× el promedio
+    // ni < 0.1× el promedio (a menos que sea necesario)
+    const avg = target / totalCells;
+    const maxAllowed = Math.min(maxAmount || Infinity, avg * 5);
+    const minAllowed = Math.max(minAmount || 1, avg * 0.1);
+
+    const outliers = amounts.filter((a) => a > maxAllowed || a < minAllowed);
+    if (outliers.length > totalCells * 0.3) {
+      // más del 30% son outliers
+      return c.json(
+        {
+          error: `Con estos parámetros la distribución es muy desigual. 
+            El monto promedio por celda sería ${Math.round(avg)}. 
+            Ajustá el máximo a ~${Math.round(avg * 3)} o aumentá la meta.`,
+        },
+        400,
+      );
+    }
 
     // 4. Insertar plan
     const [planNew] = await db
@@ -84,11 +189,9 @@ routes.post("/", sValidator("json", createPlanSchema), async (c) => {
         userId: user.id,
         title: data.title,
         description: data.description,
-        icon: data.icon ?? "🎯",
         targetAmount: data.targetAmount,
         gridRows: data.gridRows ?? 6,
         gridCols: data.gridCols ?? 7,
-        currency: data.currency ?? "CLP",
         category: data.category,
         deadline: data.deadline,
         method: data.method || "custom_grid",
@@ -106,8 +209,8 @@ routes.post("/", sValidator("json", createPlanSchema), async (c) => {
       planId: newPlanId,
       position: index,
       amount: amount,
-      status: "pending" as const,
-      isLocked: 0,
+      status: "pending",
+      isLockedAmount: 0,
     }));
 
     // 5. Insertar celdas con D1 batch (cada celda = 1 statement, 6 variables)
@@ -116,6 +219,7 @@ routes.post("/", sValidator("json", createPlanSchema), async (c) => {
     // D1 hard limit: 100 statements per batch
     for (let i = 0; i < cellInserts.length; i += 100) {
       const chunk = cellInserts.slice(i, i + 100);
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation >
       await db.batch(chunk as any);
     }
 
@@ -209,29 +313,29 @@ routes.post("/:id/rebalance", async (c) => {
 
   const cellsData = await db.select().from(cell).where(eq(cell.planId, id)).all();
 
-  const pendingCells = cellsData.filter((c) => c.status === "pending" && !c.isLocked);
+  const pendingCells = cellsData.filter((c) => c.status === "pending");
 
   if (pendingCells.length === 0) {
     return c.json({ error: "No hay celdas pendientes para rebalancear" }, 400);
   }
 
-  const newAmounts = rebalanceCells(
-    cellsData.map((c) => ({
+  const newAmounts = rebalanceCells({
+    cells: cellsData.map((c) => ({
       id: c.id,
       amount: c.amount,
       status: c.status,
-      isLocked: Boolean(c.isLocked),
+      isLocked: c.isLockedAmount,
     })),
-    Number(planData.targetAmount),
-    (planData.rebalanceMode as "proportional" | "random") || "proportional",
-    Number(planData.minAmount) || 0,
-    Number(planData.maxAmount) || 0,
-  );
+    totalTarget: Number(planData.targetAmount),
+    mode: (planData.rebalanceMode as "proportional" | "random") || "proportional",
+    minAmount: Number(planData.minAmount) || 0,
+    maxAmount: Number(planData.maxAmount) || 0,
+  });
 
   // update cells pending (no transaction D1)
   for (const item of newAmounts) {
     const original = cellsData.find((c) => c.id === item.id);
-    if (original && original.status === "pending" && !original.isLocked && original.amount !== item.amount) {
+    if (original && original.status === "pending" && !original.isLockedAmount && original.amount !== item.amount) {
       await db.update(cell).set({ amount: item.amount }).where(eq(cell.id, item.id));
     }
   }
@@ -297,6 +401,7 @@ routes.post("/:id/timeline", sValidator("json", timelineEntrySchema), async (c) 
     type: data.type,
     amount: data.amount ?? null,
     description: data.description ?? null,
+    date: data.date ?? null,
   });
 
   // update currentAmount of plan according to the type
