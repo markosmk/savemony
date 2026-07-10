@@ -53,3 +53,6 @@ minimumReleaseAgeExclude:
   - '@radix-ui/react-toolbar@1.1.15'
   - '@radix-ui/react-tooltip@1.2.12'
   - radix-ui@1.6.2
+  - '@cloudflare/vitest-pool-workers@0.18.4'
+  - miniflare@4.20260708.1
+  - wrangler@4.110.0

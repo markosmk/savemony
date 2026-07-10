@@ -1,9 +1,9 @@
 {
 	"$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
 	"vcs": {
-		"enabled": false,
+		"enabled": true,
 		"clientKind": "git",
-		"useIgnoreFile": false
+		"useIgnoreFile": true
 	},
 	"formatter": {
 		"enabled": true,
@@ -87,13 +87,27 @@
 	},
 	"overrides": [
 		{
-			"formatter": {
-				"indentWidth": 2
+			"javascript": {
+				"formatter": {
+					"indentWidth": 2
+				}
 			}
 		}
 	],
 	"files": {
-		"ignoreUnknown": true
+		"ignoreUnknown": true,
+		"includes": [
+			"**",
+			"!!**/node_modules",
+			"!!**/dist",
+			"!!**/.next",
+			"!!**/build",
+			"!!**/out",
+			"!!**/.turbo",
+			"!!package-lock.json",
+			"!!yarn.lock",
+			"!!pnpm-lock.yaml"
+		]
 	},
 	"css": {
 		"parser": {
