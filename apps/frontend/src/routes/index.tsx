@@ -1,16 +1,16 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { LandingView } from "@/components/views/landing-view";
 
 export const Route = createFileRoute("/")({
-	component: HomePage,
+  component: HomePage,
 });
 
 function HomePage() {
-	return (
-		<div className="flex h-screen items-center justify-center">
-			<div className="flex items-center gap-4">
-				<Link to="/login">Iniciar sesión</Link>
-				<Link to="/register">Crear cuenta</Link>
-			</div>
-		</div>
-	);
+  return (
+    <TooltipProvider>
+      <LandingView />
+    </TooltipProvider>
+  );
 }
