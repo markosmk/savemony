@@ -10,6 +10,7 @@ import cellsRoutes from "./routes/cells";
 import challengesRouter from "./routes/challenges";
 import plansRoutes from "./routes/plans";
 import settingsRoutes from "./routes/settings";
+import setupRouter from "./routes/setup";
 import statsRouter from "./routes/stats";
 import timelineRoutes from "./routes/timeline";
 import { AppError } from "./types";
@@ -48,6 +49,7 @@ app.route("/api/timeline", timelineRoutes);
 app.route("/api/achievements", achievementRoutes);
 app.route("/api/challenges", challengesRouter);
 app.route("/api/stats", statsRouter);
+app.route("/setup", setupRouter);
 
 // Health check
 app.get("/health", (c) => c.json({ status: "ok", timestamp: new Date().toISOString() }));

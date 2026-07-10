@@ -5,6 +5,7 @@ import { authMiddleware } from "../middlewares/auth";
 
 export type AppBindings = {
   Bindings: {
+    ENVIRONMENT: string;
     DB: D1Database;
     FRONTEND_URL: string;
     RESEND_API_KEY: string;

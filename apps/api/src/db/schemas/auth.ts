@@ -23,6 +23,8 @@ export const user = sqliteTable("user", {
     .$defaultFn(() => new Date()),
 });
 
+export type UserInsert = typeof user.$inferInsert;
+
 export const session = sqliteTable(
   "session",
   {
