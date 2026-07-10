@@ -1,3 +1,4 @@
+import type { AchievementDTO } from "@savemony/shared";
 import { eq } from "drizzle-orm";
 
 import { getDB } from "../db";
@@ -31,7 +32,7 @@ routes.get("/", async (c) => {
     unlockedAt: unlockedMap.get(item.id) || null,
   }));
 
-  return c.json({ success: true, data: formatted });
+  return c.json<AchievementDTO[]>(formatted);
 });
 
 export default routes;

@@ -106,3 +106,13 @@ export interface ChallengeDTO {
   isActive: boolean;
   createdAt: string | null;
 }
+
+export interface AchievementDTO {
+  id: string;
+  title: string;
+  description: string;
+  key: string;
+  condition: string;
+  isUnlocked: boolean;
+  unlockedAt: string | null;
+}
