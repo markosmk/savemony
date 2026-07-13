@@ -21,7 +21,6 @@ import { AlertMessage } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlan, useRebalanceAll, useUpdatePlan } from "@/services/plans.hooks";
-import { useAddTimelineEntry } from "@/services/timeline.hooks";
 import { useConfirm } from "@/stores/confirm/use-confirm-store";
 import { useModal } from "@/stores/modal/use-modal-store";
 import { useSheet } from "@/stores/sheet/use-sheet-store";
@@ -43,7 +42,6 @@ function PlanDetailPage() {
 
   const updatePlan = useUpdatePlan();
   const rebalanceAll = useRebalanceAll();
-  const addTimelineEntry = useAddTimelineEntry();
 
   const handleTogglePause = () => {
     if (!plan) return null;
@@ -103,8 +101,15 @@ function PlanDetailPage() {
     if (!plan) return;
     openModal({
       title: "Retirar de este plan",
-      description: "Selecciona un monto para retirar",
-      content: (onCancel) => <QuickWithdrawForm planId={plan.id} onCancel={onCancel} />,
+      description: "Registra un retiro de tus ahorros. El monto se descontará de tu progreso actual.",
+      content: (onCancel) => (
+        <QuickWithdrawForm
+          planId={plan.id}
+          onCancel={onCancel}
+          currentAmount={plan.currentAmount}
+          currency={currency}
+        />
+      ),
     });
   };
 
