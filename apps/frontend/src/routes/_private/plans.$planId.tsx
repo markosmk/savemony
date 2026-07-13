@@ -12,8 +12,10 @@ import { StatsCurrentPlan } from "@/components/plan-detail/stats-current-plan";
 import { QuickDepositDialog } from "@/components/shared/quick-deposit-dialog";
 // import { SavingsPredictor } from "@/components/shared/savings-predictor";
 import { SavingsReminder } from "@/components/shared/savings-reminder";
+import { AlertMessage } from "@/components/ui/alert";
 // import { SavingsTrendsChart } from "@/components/shared/savings-trends-chart";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { usePlan } from "@/services/plans.hooks";
 import { useModal } from "@/stores/modal/use-modal-store";
 import { useSheet } from "@/stores/sheet/use-sheet-store";
@@ -24,7 +26,7 @@ export const Route = createFileRoute("/_private/plans/$planId")({
 
 function PlanDetailPage() {
   const { planId } = Route.useParams();
-  const { data: plan, isLoading } = usePlan(planId);
+  const { data: plan, isLoading, error } = usePlan(planId);
   const { openModal, closeModal } = useModal();
   const { openSheet } = useSheet();
 
@@ -42,8 +44,6 @@ function PlanDetailPage() {
     });
   };
 
-  const handleOpenRebalance = () => {};
-
   const handleOpenTimeline = () => {
     openSheet({
       title: "Timeline",
@@ -54,12 +54,36 @@ function PlanDetailPage() {
     });
   };
 
+  const handleOpenRebalance = () => {};
   const handleOpenWithdraw = () => {};
   const handleOpenNote = () => {};
   const handleOpenShare = () => {};
 
-  if (isLoading) return <p>Cargando plan...</p>;
-  if (!plan) return <p>Plan no encontrado</p>;
+  if (isLoading) {
+    return (
+      <div>
+        <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
+          <Skeleton className="mb-6 h-8 w-48" />
+          <div className="space-y-4">
+            <Skeleton className="h-56 rounded-xl" />
+            <Skeleton className="h-52 rounded-xl" />
+            <Skeleton className="h-48 rounded-xl" />
+            <Skeleton className="h-32 rounded-xl" />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (error || !plan) {
+    return (
+      <div>
+        <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6">
+          <AlertMessage variant="destructive" title="Error" message="No se pudo cargar el plan. Intenta de nuevo." />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div>
