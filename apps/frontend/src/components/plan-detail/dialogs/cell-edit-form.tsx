@@ -1,21 +1,26 @@
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { type EditCellPayload, editCellSchema } from "@savemony/shared";
 import { useForm } from "react-hook-form";
+import { toast } from "sonner";
 
 import { Button, ButtonLoading } from "@/components/ui/button";
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { FieldController } from "@/components/ui/field-controller";
 import { InputNumber } from "@/components/ui/input-number";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { formatCurrency } from "@/constants/currencies";
 import { useEditCellAndRebalance } from "@/services/cells.hooks";
 import type { CellData } from "@/types/app";
 
 interface CellEditFormProps {
   planId: string;
   cell: CellData;
+  minAmount: number;
+  maxAmount: number;
+  currency: string;
   onCancel: () => void;
 }
-export function CellEditForm({ planId, cell, onCancel }: CellEditFormProps) {
+export function CellEditForm({ planId, cell, minAmount, maxAmount, currency, onCancel }: CellEditFormProps) {
   const editCell = useEditCellAndRebalance();
 
   const form = useForm<EditCellPayload>({
@@ -28,6 +33,15 @@ export function CellEditForm({ planId, cell, onCancel }: CellEditFormProps) {
   });
 
   const handleConfirmEdit = async (data: EditCellPayload) => {
+    if (minAmount > 0 && data.newAmount < minAmount) {
+      toast.error(`El monto mínimo es ${formatCurrency(minAmount, currency)}`);
+      return;
+    }
+    if (maxAmount > 0 && data.newAmount > maxAmount) {
+      toast.error(`El monto máximo es ${formatCurrency(maxAmount, currency)}`);
+      return;
+    }
+
     editCell.mutate(
       {
         planId: planId,

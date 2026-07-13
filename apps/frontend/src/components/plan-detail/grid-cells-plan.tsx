@@ -21,6 +21,14 @@ export function GridCellsPlan({ plan }: GridCellsPlanProps) {
   const { openModal } = useModal();
   const toggle = useToggleCell();
 
+  const { minAmount, maxAmount } = useMemo(() => {
+    const amounts = plan.cells.map((c) => c.amount);
+    return {
+      minAmount: Math.min(...amounts),
+      maxAmount: Math.max(...amounts),
+    };
+  }, [plan.cells]);
+
   const handleCellToggle = useCallback(
     async (cell: CellData, action: "complete" | "uncomplete") => {
       try {
@@ -42,17 +50,18 @@ export function GridCellsPlan({ plan }: GridCellsPlanProps) {
     openModal({
       title: `Editar celda #${cell.position + 1}`,
       description: `Cambiar el monto rebalanceará las demás celdas pendientes.`,
-      content: (onClose) => <CellEditForm cell={cell} onCancel={onClose} planId={plan.id} />,
+      content: (onClose) => (
+        <CellEditForm
+          cell={cell}
+          onCancel={onClose}
+          planId={plan.id}
+          minAmount={minAmount}
+          maxAmount={maxAmount}
+          currency={currency}
+        />
+      ),
     });
   };
-
-  const { minAmount, maxAmount } = useMemo(() => {
-    const amounts = plan.cells.map((c) => c.amount);
-    return {
-      minAmount: Math.min(...amounts),
-      maxAmount: Math.max(...amounts),
-    };
-  }, [plan.cells]);
 
   return (
     <Card className="mb-4 py-4">
