@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Info, Sparkles } from "lucide-react";
 
 import { AnimatedDiv } from "@/components/animated-div";
-import { AboutDialogContent } from "@/components/shared/about-dialog-content";
+import { AboutContent } from "@/components/dialogs/about-content";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,7 +25,7 @@ export function SettingsView() {
 
   const handleAbout = () =>
     openModal({
-      content: AboutDialogContent,
+      content: AboutContent,
     });
 
   if (isLoading) {
@@ -66,7 +66,7 @@ export function SettingsView() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6 flex items-center gap-3"
         >
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/" })} className="shrink-0">
+          <Button variant="ghost" size="icon" onClick={() => navigate({ to: "/panel" })} className="shrink-0">
             <ArrowLeft className="size-5" />
           </Button>
           <div>
