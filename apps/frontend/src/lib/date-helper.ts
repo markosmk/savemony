@@ -83,3 +83,9 @@ export function isFuture(date: string | number | Date, tz: string = DEFAULT_TIME
 export function getDefaultTimezone(): string {
   return DEFAULT_TIMEZONE;
 }
+
+// convierte el string iso de entrada a un objeto Datejs
+export function parseISO(value: string) {
+  if (!value) return;
+  return dayjs(value).tz(DEFAULT_TIMEZONE).toDate();
+}

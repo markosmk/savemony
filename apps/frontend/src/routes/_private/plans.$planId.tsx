@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { BanknoteIcon, HistoryIcon, Share2Icon, ShuffleIcon, StickyNoteIcon } from "lucide-react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
 
 import { TimelineContent } from "@/components/dialogs/timeline-content";
+import { QuickNoteForm } from "@/components/plan-detail/dialogs/quick-note-form";
+import { QuickWithdrawForm } from "@/components/plan-detail/dialogs/quick-withdraw-form";
+import { ShareContent } from "@/components/plan-detail/dialogs/share-content";
 import { GridCellsPlan } from "@/components/plan-detail/grid-cells-plan";
 import { HeaderPlan } from "@/components/plan-detail/header-plan";
 import { LastTimelineEntry } from "@/components/plan-detail/last-timeline-entry";
@@ -16,7 +20,9 @@ import { AlertMessage } from "@/components/ui/alert";
 // import { SavingsTrendsChart } from "@/components/shared/savings-trends-chart";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePlan } from "@/services/plans.hooks";
+import { usePlan, useRebalanceAll, useUpdatePlan } from "@/services/plans.hooks";
+import { useAddTimelineEntry } from "@/services/timeline.hooks";
+import { useConfirm } from "@/stores/confirm/use-confirm-store";
 import { useModal } from "@/stores/modal/use-modal-store";
 import { useSheet } from "@/stores/sheet/use-sheet-store";
 
@@ -28,11 +34,36 @@ function PlanDetailPage() {
   const { planId } = Route.useParams();
   const { data: plan, isLoading, error } = usePlan(planId);
   const { openModal, closeModal } = useModal();
+  const confirm = useConfirm();
   const { openSheet } = useSheet();
 
   const currency = "ARS"; // FIXME.. currency must to be in store... read from settings
   const isRebalancing = false;
   const noteCount = 2;
+
+  const updatePlan = useUpdatePlan();
+  const rebalanceAll = useRebalanceAll();
+  const addTimelineEntry = useAddTimelineEntry();
+
+  const handleTogglePause = () => {
+    if (!plan) return null;
+    updatePlan.mutate(
+      {
+        id: plan.id,
+        data: {
+          status: plan.status === "active" ? "paused" : "active",
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(`Plan ${plan.status === "active" ? "pausado" : "activado"}`);
+        },
+        onError: () => {
+          toast.error(`Error al ${plan.status === "active" ? "pausar" : "activar"} el plan`);
+        },
+      },
+    );
+  };
 
   const handleOpenQuickDeposit = () => {
     openModal({
@@ -54,10 +85,44 @@ function PlanDetailPage() {
     });
   };
 
-  const handleOpenRebalance = () => {};
-  const handleOpenWithdraw = () => {};
-  const handleOpenNote = () => {};
-  const handleOpenShare = () => {};
+  const handleOpenRebalance = () => {
+    if (!plan) return;
+    confirm({
+      title: "Rebalancear Plan",
+      message: "¿Estás seguro de que quieres rebalancear el plan?",
+      action: async () => {
+        await rebalanceAll.mutateAsync(plan.id);
+      },
+      // error: (error) => {
+      // 	toast.error(error.message);
+      // },
+    });
+  };
+
+  const handleOpenWithdraw = () => {
+    if (!plan) return;
+    openModal({
+      title: "Retirar de este plan",
+      description: "Selecciona un monto para retirar",
+      content: (onCancel) => <QuickWithdrawForm planId={plan.id} onCancel={onCancel} />,
+    });
+  };
+
+  const handleOpenNote = () => {
+    if (!plan) return;
+    openModal({
+      title: "Agregar Nota",
+      content: (onCancel) => <QuickNoteForm planId={plan.id} onCancel={onCancel} />,
+    });
+  };
+
+  const handleOpenShare = () => {
+    openModal({
+      title: "Compartir Plan",
+      description: "Comparte tu progreso con tus amigos",
+      content: plan ? <ShareContent plan={plan} /> : null,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -93,16 +158,21 @@ function PlanDetailPage() {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-center"
+            className="mb-4 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-900/30 px-4 py-3 text-center"
           >
-            <p className="text-sm font-medium text-amber-700">Plan pausado</p>
+            <p className="text-sm font-medium text-amber-700 dark:text-amber-500">Plan pausado</p>
             <p className="mt-0.5 text-xs text-amber-600">
               Las celdas están bloqueadas. Reanuda el plan para seguir ahorrando.
             </p>
           </motion.div>
         )}
 
-        <HeaderPlan plan={plan} onShareOpen={() => {}} onTogglePause={() => {}} isTogglingPause={false} />
+        <HeaderPlan
+          plan={plan}
+          onShareOpen={handleOpenShare}
+          onTogglePause={handleTogglePause}
+          isTogglingPause={updatePlan.isPending}
+        />
 
         <StatsCurrentPlan plan={plan} currency={currency} />
 
