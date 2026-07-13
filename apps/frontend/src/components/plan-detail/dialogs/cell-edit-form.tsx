@@ -49,7 +49,7 @@ export function CellEditForm({ planId, cell, onCancel }: CellEditFormProps) {
         control={form.control}
         name="newAmount"
         label="Monto"
-        render={(field) => <InputNumber {...field} />}
+        render={(field) => <InputNumber {...field} onFocus={(e) => e.target.select()} />}
       />
 
       <FieldController
