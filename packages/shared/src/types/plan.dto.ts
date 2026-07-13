@@ -9,6 +9,7 @@ export interface PlanDTO {
   method: string;
   status: string;
   streak: number;
+  archived: number;
   // additionals UI
   progressPercent: number;
   completedCells: number;

@@ -31,6 +31,7 @@ routes.get("/", async (c) => {
       method: plan.method,
       status: plan.status,
       streak: plan.streak,
+      archived: plan.archived,
       createdAt: plan.createdAt,
       totalCells: sql<number>`CAST(count(${cell.id}) AS INTEGER)`,
       completedCells: sql<number>`CAST(sum(case when ${cell.status} = 'completed' then 1 else 0 end) AS INTEGER)`,
