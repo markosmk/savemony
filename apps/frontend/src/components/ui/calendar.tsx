@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { CalendarIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { type DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
 
 import { Button, buttonVariants } from "@/components/ui/button";
+import { formatDate, parseISO } from "@/lib/date-helper";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 function Calendar({
   className,
@@ -25,7 +27,7 @@ function Calendar({
     <DayPicker
       showOutsideDays={showOutsideDays}
       className={cn(
-        "group/calendar bg-background p-3 [--cell-size:--spacing(8)] [[data-slot=card-content]_&]:bg-transparent [[data-slot=popover-content]_&]:bg-transparent",
+        "group/calendar bg-background p-3 [--cell-size:--spacing(8)] in-data-[slot=card-content]:bg-transparent in-data-[slot=popover-content]:bg-transparent",
         String.raw`rtl:**:[.rdp-button\_next>svg]:rotate-180`,
         String.raw`rtl:**:[.rdp-button\_previous>svg]:rotate-180`,
         className,
@@ -158,4 +160,36 @@ function CalendarDayButton({ className, day, modifiers, ...props }: React.Compon
   );
 }
 
-export { Calendar, CalendarDayButton };
+interface CalendarInputProps {
+  value?: string; // ISO string (ej: "2026-07-13")
+  onChange?: (value: string) => void; // ISO string o vacío
+  placeholder?: string;
+}
+
+function CalendarInput({ value, onChange, placeholder = "Selecciona una fecha" }: CalendarInputProps) {
+  const date = value ? parseISO(value) : undefined;
+  const handleSelect = (selectedDate: Date | undefined) => {
+    if (onChange) {
+      onChange(selectedDate ? selectedDate.toISOString() : "");
+    }
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant={"outline"}
+          className={cn("w-[240px] justify-start text-left font-normal", !date && "text-muted-foreground")}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date ? formatDate(date, "DD [de] MMMM, YYYY") : <span>{placeholder}</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar mode="single" selected={date} onSelect={handleSelect} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+export { Calendar, CalendarDayButton, CalendarInput };
