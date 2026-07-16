@@ -4,7 +4,7 @@ import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 
 import { getDB } from "../db";
 import type { User } from "../db/schemas";
-import { session, user } from "../db/schemas";
+import { sessions, users } from "../db/schemas";
 
 export type Variables = {
   user: User;
@@ -18,14 +18,14 @@ export async function authMiddleware(c: Context<{ Bindings: { DB: D1Database }; 
   }
 
   const db = getDB(c.env.DB);
-  const sessionDB = await db.select().from(session).where(eq(session.id, sessionToken)).get();
+  const sessionDB = await db.select().from(sessions).where(eq(sessions.id, sessionToken)).get();
 
   if (!sessionDB || new Date() > sessionDB.expiresAt) {
     deleteCookie(c, "session");
     return c.json({ error: "Sesión expirada o inexistente" }, 401);
   }
 
-  const userDB = await db.select().from(user).where(eq(user.id, sessionDB.userId)).get();
+  const userDB = await db.select().from(users).where(eq(users.id, sessionDB.userId)).get();
   if (!userDB) {
     return c.json({ error: "Usuario no encontrado" }, 404);
   }
@@ -51,7 +51,7 @@ export async function createSession(c: Context, userId: string, ip: string, user
 
   const env = c.env as { DB: D1Database };
   const db = getDB(env.DB);
-  await db.insert(session).values({
+  await db.insert(sessions).values({
     id: token,
     userId,
     ipAddress: ip,
@@ -73,7 +73,7 @@ export async function createSession(c: Context, userId: string, ip: string, user
 export async function revokeSession(c: Context, token: string) {
   const env = c.env as { DB: D1Database };
   const db = getDB(env.DB);
-  await db.delete(session).where(eq(session.id, token));
+  await db.delete(sessions).where(eq(sessions.id, token));
   deleteCookie(c, "session");
 }
 
