@@ -1,19 +1,18 @@
 import { relations, sql } from "drizzle-orm";
 import { index, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { cell } from "./cell";
-import { plan } from "./plan";
+import { planEntries, plans } from "./plan";
 
-export const timeline = sqliteTable(
-  "timeline",
+export const timelines = sqliteTable(
+  "timelines",
   {
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     planId: text("plan_id")
       .notNull()
-      .references(() => plan.id, { onDelete: "cascade" }),
-    cellId: text("cell_id").references(() => cell.id, { onDelete: "set null" }),
+      .references(() => plans.id, { onDelete: "cascade" }),
+    planEntryId: text("plan_entry_id").references(() => planEntries.id, { onDelete: "set null" }),
     type: text("type").notNull(),
     amount: real("amount"),
     description: text("description"),
@@ -26,12 +25,16 @@ export const timeline = sqliteTable(
   (table) => [index("idx_timeline_plan_id").on(table.planId), index("idx_timeline_date").on(table.date)],
 );
 
-export const timelineRelations = relations(timeline, ({ one }) => ({
-  plan: one(plan, {
-    fields: [timeline.planId],
-    references: [plan.id],
+export const timelineRelations = relations(timelines, ({ one }) => ({
+  plan: one(plans, {
+    fields: [timelines.planId],
+    references: [plans.id],
+  }),
+  planEntry: one(planEntries, {
+    fields: [timelines.planEntryId],
+    references: [planEntries.id],
   }),
 }));
 
-export type Timeline = typeof timeline.$inferSelect;
-export type TimelineInsert = typeof timeline.$inferInsert;
+export type Timeline = typeof timelines.$inferSelect;
+export type TimelineInsert = typeof timelines.$inferInsert;

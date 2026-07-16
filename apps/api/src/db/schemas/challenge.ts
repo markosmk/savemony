@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
-import { user } from "./auth";
+import { users } from "./auth";
 
-export const challenge = sqliteTable("challenge", {
+export const challenges = sqliteTable("challenges", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -18,7 +18,7 @@ export const challenge = sqliteTable("challenge", {
   createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
-export const userChallenge = sqliteTable(
+export const userChallenges = sqliteTable(
   "user_challenges",
   {
     id: text("id")
@@ -26,10 +26,10 @@ export const userChallenge = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     userId: text("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     challengeId: text("challenge_id")
       .notNull()
-      .references(() => challenge.id, { onDelete: "cascade" }),
+      .references(() => challenges.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("active"), // 'active', 'completed', 'failed', 'cancelled'
     currentProgress: integer("current_progress").notNull().default(0),
     startedAt: text("started_at").default(sql`CURRENT_TIMESTAMP`),
@@ -40,12 +40,12 @@ export const userChallenge = sqliteTable(
   (table) => [uniqueIndex("user_challenge_unique_idx").on(table.userId, table.challengeId)],
 );
 
-export type ChallengeSelect = typeof challenge.$inferSelect;
-export type ChallengeInsert = typeof challenge.$inferInsert;
+export type ChallengeSelect = typeof challenges.$inferSelect;
+export type ChallengeInsert = typeof challenges.$inferInsert;
 export type ChallengeUpdate = Omit<ChallengeInsert, "id" | "createdAt" | "updatedAt">;
 
-export type UserChallengeSelect = typeof userChallenge.$inferSelect;
-export type UserChallengeInsert = typeof userChallenge.$inferInsert;
+export type UserChallengeSelect = typeof userChallenges.$inferSelect;
+export type UserChallengeInsert = typeof userChallenges.$inferInsert;
 export type UserChallengeUpdate = Omit<
   UserChallengeInsert,
   "id" | "userId" | "challengeId" | "startedAt" | "completedAt" | "expiresAt" | "updatedAt"

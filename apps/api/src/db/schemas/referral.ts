@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const referral = sqliteTable("referrals", {
+export const referrals = sqliteTable("referrals", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -12,5 +12,5 @@ export const referral = sqliteTable("referrals", {
   completedAt: text("completed_at"), // Se llena al completar la 1ra celda
 });
 
-export type Referral = typeof referral.$inferSelect;
-export type ReferralInsert = typeof referral.$inferInsert;
+export type Referral = typeof referrals.$inferSelect;
+export type ReferralInsert = typeof referrals.$inferInsert;

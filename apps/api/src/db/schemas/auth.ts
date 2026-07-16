@@ -4,7 +4,7 @@
 import { sql } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-export const user = sqliteTable("user", {
+export const users = sqliteTable("users", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -23,15 +23,15 @@ export const user = sqliteTable("user", {
     .$defaultFn(() => new Date()),
 });
 
-export type UserInsert = typeof user.$inferInsert;
+export type UserInsert = typeof users.$inferInsert;
 
-export const session = sqliteTable(
-  "session",
+export const sessions = sqliteTable(
+  "sessions",
   {
     id: text("id").primaryKey(),
     userId: text("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
@@ -51,7 +51,7 @@ export const account = sqliteTable("account", {
   providerId: text("provider_id").notNull(),
   userId: text("user_id")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
@@ -66,14 +66,14 @@ export const account = sqliteTable("account", {
     .$defaultFn(() => new Date()),
 });
 
-export const verification = sqliteTable("verification", {
+export const verifications = sqliteTable("verifications", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
 
   userId: text("user_id")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
+    .references(() => users.id, { onDelete: "cascade" }),
   type: text("type", { enum: ["email_verification", "password_reset"] }).notNull(),
   token: text("token").notNull().unique(),
   expiresAt: text("expires_at").notNull(),
@@ -81,9 +81,9 @@ export const verification = sqliteTable("verification", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
-export type User = typeof user.$inferSelect;
-export type NewUser = typeof user.$inferInsert;
-export type Session = typeof session.$inferSelect;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type Session = typeof sessions.$inferSelect;
 export type Account = typeof account.$inferSelect;
-export type Verification = typeof verification.$inferSelect;
-export type VerificationInsert = typeof verification.$inferInsert;
+export type Verification = typeof verifications.$inferSelect;
+export type VerificationInsert = typeof verifications.$inferInsert;

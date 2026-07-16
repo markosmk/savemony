@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-import { user } from "./auth";
+import { users } from "./auth";
 
 export const settings = sqliteTable("settings", {
   id: text("id")
@@ -9,7 +9,7 @@ export const settings = sqliteTable("settings", {
     .$defaultFn(() => crypto.randomUUID()),
   userId: text("user_id")
     .notNull()
-    .references(() => user.id, { onDelete: "cascade" })
+    .references(() => users.id, { onDelete: "cascade" })
     .unique(),
   currency: text("currency").notNull().default("CLP"),
   locale: text("locale").notNull().default("en"),

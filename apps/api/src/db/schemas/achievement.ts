@@ -1,9 +1,9 @@
 import { sql } from "drizzle-orm";
 import { sqliteTable, text, unique } from "drizzle-orm/sqlite-core";
 
-import { user } from "./auth";
+import { users } from "./auth";
 
-export const achievement = sqliteTable("achievement", {
+export const achievements = sqliteTable("achievements", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
@@ -21,14 +21,14 @@ export const userAchievements = sqliteTable(
       .$defaultFn(() => crypto.randomUUID()),
     userId: text("user_id")
       .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+      .references(() => users.id, { onDelete: "cascade" }),
     achievementId: text("achievement_id")
       .notNull()
-      .references(() => achievement.id, { onDelete: "cascade" }),
+      .references(() => achievements.id, { onDelete: "cascade" }),
     unlockedAt: text("unlocked_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [unique("unq_user_achievement").on(table.userId, table.achievementId)],
 );
 
-export type Achievement = typeof achievement.$inferSelect;
-export type AchievementInsert = typeof achievement.$inferInsert;
+export type Achievement = typeof achievements.$inferSelect;
+export type AchievementInsert = typeof achievements.$inferInsert;
