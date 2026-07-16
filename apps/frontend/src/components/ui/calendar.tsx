@@ -1,12 +1,12 @@
-"use client";
-
 import * as React from "react";
-import { CalendarIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import { CalendarIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import { type DayButton, DayPicker, getDefaultClassNames } from "react-day-picker";
+import { es } from "react-day-picker/locale";
 
 import { Button, buttonVariants } from "@/components/ui/button";
-import { formatDate, parseISO } from "@/lib/date-helper";
+import { formatDate, formatISO, parseISO } from "@/lib/date-helper";
 import { cn } from "@/lib/utils";
+import { Badge } from "./badge";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 function Calendar({
@@ -125,6 +125,7 @@ function Calendar({
         },
         ...components,
       }}
+      locale={es}
       {...props}
     />
   );
@@ -160,36 +161,127 @@ function CalendarDayButton({ className, day, modifiers, ...props }: React.Compon
   );
 }
 
-interface CalendarInputProps {
+type CalendarInputProps = Omit<React.ComponentProps<typeof DayPicker>, "mode"> & {
   value?: string; // ISO string (ej: "2026-07-13")
   onChange?: (value: string) => void; // ISO string o vacío
   placeholder?: string;
-}
+};
 
-function CalendarInput({ value, onChange, placeholder = "Selecciona una fecha" }: CalendarInputProps) {
+function CalendarInput({ value, onChange, placeholder = "Selecciona fecha", ...props }: CalendarInputProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  // Parseamos la fecha de manera segura para pasarla al componente Calendar
   const date = value ? parseISO(value) : undefined;
   const handleSelect = (selectedDate: Date | undefined) => {
     if (onChange) {
-      onChange(selectedDate ? selectedDate.toISOString() : "");
+      onChange(selectedDate ? formatISO(selectedDate) : "");
+      // onChange(selectedDate ? formatISO(selectedDate, { representation: 'date' }) : "");
     }
+    setIsOpen(false);
   };
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
-          variant={"outline"}
-          className={cn("w-[240px] justify-start text-left font-normal", !date && "text-muted-foreground")}
+          variant="outline"
+          className={cn(
+            "min-w-[240px] h-10 border-input justify-start text-left font-normal",
+            !date && "text-muted-foreground",
+          )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
           {date ? formatDate(date, "DD [de] MMMM, YYYY") : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
-        <Calendar mode="single" selected={date} onSelect={handleSelect} />
+        <Calendar mode="single" selected={date} onSelect={handleSelect} defaultMonth={date} {...props} />
       </PopoverContent>
     </Popover>
   );
 }
 
-export { Calendar, CalendarDayButton, CalendarInput };
+interface MultiCalendarInputProps {
+  value?: string[]; // Array de strings ["2026-07-18", "2026-08-01"]
+  onChange?: (value: string[]) => void;
+  placeholder?: string;
+}
+
+function MultiCalendarInput({ value = [], onChange, placeholder = "Seleccionar fechas..." }: MultiCalendarInputProps) {
+  const [isOpen, setIsOpen] = React.useState(false);
+
+  // Convertimos nuestro array de strings de fechas a objetos Date reales para react-day-picker
+  const selectedDates = value.map((dateStr) => parseISO(dateStr)) as Date[];
+
+  const handleSelect = (dates: Date[] | undefined) => {
+    if (!onChange) return;
+
+    if (!dates) {
+      onChange([]);
+      return;
+    }
+
+    // Convertimos los objetos Date de vuelta a strings "YYYY-MM-DD"
+    const dateStrings = dates.map((d) => formatISO(d));
+    onChange(dateStrings);
+  };
+
+  const removeDate = (dateToRemove: string) => {
+    if (!onChange) return;
+    onChange(value.filter((d) => d !== dateToRemove));
+  };
+
+  return (
+    <div className="space-y-2">
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn("w-full justify-start text-left font-normal", value.length === 0 && "text-muted-foreground")}
+          >
+            <CalendarIcon className="mr-2 h-4 w-4" />
+            {value.length > 0 ? (
+              <span>
+                {value.length} {value.length === 1 ? "fecha seleccionada" : "fechas seleccionadas"}
+              </span>
+            ) : (
+              <span>{placeholder}</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            mode="multiple"
+            selected={selectedDates}
+            onSelect={handleSelect}
+            defaultMonth={parseISO(value[0])}
+          />
+        </PopoverContent>
+      </Popover>
+
+      {/* Renderizado de Tags con las fechas elegidas */}
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {value.map((dateStr) => {
+            const dateObj = parseISO(dateStr) as Date;
+            return (
+              <Badge key={dateStr} variant="secondary" className="flex items-center gap-1 pl-2.5 pr-1 py-0.5">
+                {/* Formateamos para que sea legible (ej: 18 de Julio, 2026) */}
+                {formatDate(dateObj, "DD [de] MMMM, YYYY")}
+                <button
+                  type="button"
+                  onClick={() => removeDate(dateStr)}
+                  className="rounded-full p-0.5 hover:bg-muted-foreground/20 text-muted-foreground transition-colors"
+                >
+                  <XIcon className="h-3 w-3" />
+                </button>
+              </Badge>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export { Calendar, CalendarDayButton, CalendarInput, MultiCalendarInput };
