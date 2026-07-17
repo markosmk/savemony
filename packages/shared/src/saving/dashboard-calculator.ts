@@ -1,3 +1,4 @@
+import type { Entry, ISODate, Plan, PlanEntryType } from "../types";
 import { formatAmount } from "../utils/currency-helpers";
 import {
   addDaysUTC,
@@ -12,22 +13,6 @@ import {
   startOfWeekUTC,
   todayUTC,
 } from "../utils/date-helpers";
-import type { Entry, ISODate } from "./types";
-
-export interface Plan {
-  id: string;
-  userId: string;
-  name: string;
-  goalAmount: number | null;
-  endDate: ISODate | null;
-  createdAt: ISODate; // fecha de creación como ancla
-  frequencyType: "DAILY" | "WEEKDAYS" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "CUSTOM_DAYS";
-  customDays?: number[];
-  suggestedQuota: number | null;
-  quickAmounts?: number[];
-  isFlexible: boolean;
-  status: "active" | "completed" | "archived";
-}
 
 export type ButtonState = "normal" | "partial" | "completed";
 
@@ -223,7 +208,7 @@ export function getCurrentPeriodInfo(plan: Plan, entries: Entry[], today: ISODat
     };
   }
 
-  if (plan.frequencyType === "CUSTOM_DAYS" && !isTodayInCustomDays(today, plan.customDays)) {
+  if (plan.frequencyType === "CUSTOM_DAYS" && !isTodayInCustomDays(today, plan.customDays ?? [])) {
     return {
       periodStart: start,
       periodEnd: end,
@@ -246,7 +231,12 @@ export function getCurrentPeriodInfo(plan: Plan, entries: Entry[], today: ISODat
   const totalSaved = totalDeposited - totalWithdrawn;
 
   // Calcular períodos restantes desde HOY hasta endDate
-  const remainingPeriods = countRemainingPeriods(plan.frequencyType, plan.endDate, plan.createdAt, plan.customDays);
+  const remainingPeriods = countRemainingPeriods(
+    plan.frequencyType,
+    plan.endDate,
+    plan.createdAt,
+    plan.customDays ?? [],
+  );
 
   // Proteger contra división por cero
   const safeRemainingPeriods = Math.max(1, remainingPeriods);
@@ -399,8 +389,8 @@ export interface FormattedEntry {
   date: ISODate;
   displayDate: string;
   amount: number;
-  type: "deposit" | "withdrawal";
-  reason?: string;
+  type: PlanEntryType;
+  reason?: string | null;
   isRecent: boolean;
 }
 /** Formato de entradas del historial */
@@ -435,7 +425,12 @@ export function getWithdrawalImpact(
   if (plan.goalAmount && plan.goalAmount > 0 && plan.endDate) {
     newPercentage = Math.min(100, Math.round((newNet / plan.goalAmount) * 100));
 
-    const remainingPeriods = countRemainingPeriods(plan.frequencyType, plan.endDate, plan.createdAt, plan.customDays);
+    const remainingPeriods = countRemainingPeriods(
+      plan.frequencyType,
+      plan.endDate,
+      plan.createdAt,
+      plan.customDays ?? [],
+    );
 
     // Proteger contra división por cero
     if (remainingPeriods > 0) {

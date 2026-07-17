@@ -1,15 +1,4 @@
-export type FrequencyType = "DAILY" | "WEEKDAYS" | "WEEKLY" | "BIWEEKLY" | "MONTHLY" | "CUSTOM_DAYS";
-
-export type ISODate = string; // "2026-07-15"
-
-export interface Entry {
-  id: string;
-  planId: string;
-  date: ISODate;
-  amount: number;
-  type: "deposit" | "withdrawal";
-  reason?: string;
-}
+import type { FrequencyType, ISODate } from "../types";
 
 export interface PlanTemplate {
   id: string;

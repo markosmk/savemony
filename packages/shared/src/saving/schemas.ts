@@ -89,8 +89,8 @@ export type UpdatePlanPayload = v.InferInput<typeof updatePlanSchema>;
 export const updateEntrySchema = v.object({
   date: v.pipe(v.string(), v.isoDate()),
   amount: v.number(),
-  type: v.picklist(["deposit", "withdrawal"]),
-  reason: v.optional(v.string()),
+  // type: v.picklist(["deposit", "withdrawal"]),
+  // reason: v.optional(v.string()),
 });
 
 export type UpdateEntryPayload = v.InferInput<typeof updateEntrySchema>;

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Plan } from "./dashboard-calculator";
+import type { Entry, Plan } from "../types";
 import {
   countRemainingPeriods,
   formatEntries,
@@ -10,7 +10,6 @@ import {
   getTotalProgress,
   getWithdrawalImpact,
 } from "./dashboard-calculator";
-import type { Entry } from "./types";
 
 function makeEntry(overrides: Partial<Entry> = {}): Entry {
   return {
@@ -19,6 +18,7 @@ function makeEntry(overrides: Partial<Entry> = {}): Entry {
     date: "2026-07-15",
     amount: 10_000,
     type: "deposit",
+    reason: null,
     ...overrides,
   };
 }
@@ -29,11 +29,12 @@ const basePlan: Plan = {
   name: "MacBook",
   goalAmount: 400_000,
   endDate: "2026-08-15",
-  createdAt: "2026-07-15",
   frequencyType: "WEEKLY",
   suggestedQuota: 80_000,
   isFlexible: false,
   status: "active",
+  createdAt: "2026-07-15",
+  updatedAt: "2026-07-15",
 };
 
 // Mock todayUTC para tests determinísticos

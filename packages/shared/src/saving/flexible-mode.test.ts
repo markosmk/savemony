@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import type { Entry } from "../types";
 import { getPiggyBankSummary, getSavingsEvolution } from "./flexible-mode";
-import type { Entry } from "./types";
 
 function makeEntry(date: string, amount: number, type: "deposit" | "withdrawal" = "deposit"): Entry {
-  return { id: String(Math.random()), planId: "plan-123", date, amount, type };
+  return { id: String(Math.random()), planId: "plan-123", date, amount, type, reason: null };
 }
 
 describe("getPiggyBankSummary", () => {

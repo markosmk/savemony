@@ -1,3 +1,4 @@
+import type { Entry, ISODate } from "../types";
 import {
   addDaysUTC as addDays,
   diffInDaysUTC as diffInDays,
@@ -7,7 +8,6 @@ import {
   subtractMonthsUTC,
   todayUTC,
 } from "../utils/date-helpers";
-import type { Entry, ISODate } from "./types";
 
 export interface WeeklyTrend {
   weekLabel: string;

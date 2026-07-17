@@ -1,5 +1,5 @@
+import type { Entry, ISODate } from "../types";
 import { addDaysUTC, diffInDaysUTC, getDaysInMonth, todayISO } from "../utils/date-helpers";
-import type { Entry, ISODate } from "./types";
 
 export interface StreakInfo {
   currentStreak: number; // días seguidos ahorrando (hoy inclusive)

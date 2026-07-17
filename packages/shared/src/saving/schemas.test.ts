@@ -2,9 +2,9 @@
 import { safeParse } from "valibot";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { FrequencyType } from "../types";
 import { PLAN_TEMPLATES } from "./calculator";
 import { type PlanCreationFormValues, planCreationSchema, validatePlanCreation } from "./schemas";
-import type { FrequencyType } from "./types";
 
 function makeStructuredPayload(overrides: Partial<PlanCreationFormValues> = {}): PlanCreationFormValues {
   return {

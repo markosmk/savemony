@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { Entry } from "../types";
 import {
   getDayOfWeekStats,
   getMonthlyTrends,
@@ -7,10 +8,9 @@ import {
   getSavingsVelocity,
   getWeeklyTrends,
 } from "./analytics";
-import type { Entry } from "./types";
 
 function makeEntry(date: string, amount: number, type: "deposit" | "withdrawal" = "deposit"): Entry {
-  return { id: String(Math.random()), planId: "123plan", date, amount, type };
+  return { id: String(Math.random()), planId: "123plan", date, amount, type, reason: null };
 }
 
 describe("getWeeklyTrends", () => {

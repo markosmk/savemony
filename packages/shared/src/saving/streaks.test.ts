@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { Entry } from "../types";
 import {
   calculateCurrentStreak,
   calculateLongestStreak,
@@ -7,10 +8,9 @@ import {
   getStreakDaysInMonth,
   getStreakInfo,
 } from "./streaks";
-import type { Entry } from "./types";
 
 function makeEntry(date: string, amount: number = 10_000, type: "deposit" | "withdrawal" = "deposit"): Entry {
-  return { id: crypto.randomUUID?.() || String(Math.random()), planId: "plan-123", date, amount, type };
+  return { id: crypto.randomUUID?.() || String(Math.random()), planId: "plan-123", date, amount, type, reason: null };
 }
 
 describe("getDepositDays", () => {
