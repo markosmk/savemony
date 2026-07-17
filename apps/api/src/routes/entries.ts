@@ -122,15 +122,16 @@ routes.patch("/:entryId", async (c) => {
 
   const now = nowUTC();
   const db = getDB(c.env.DB);
-  await db
+  const [entryUpdated] = await db
     .update(entries)
     .set({
       amount: data.amount,
       updatedAt: now,
     })
-    .where(and(eq(entries.id, entryId), eq(entries.planId, planId)));
+    .where(and(eq(entries.id, entryId), eq(entries.planId, planId)))
+    .returning();
 
-  return c.json({ success: true });
+  return c.json({ success: true, entry: entryUpdated });
 });
 
 // DELETE /api/plans/:planId/entries/:entryId
