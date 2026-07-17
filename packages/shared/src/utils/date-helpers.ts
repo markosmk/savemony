@@ -23,6 +23,7 @@ const DEFAULT_TIMEZONE = "America/Argentina/Buenos_Aires";
 /**
  * Fecha de hoy en UTC como string YYYY-MM-DD.
  * Equivalente a new Date().toISOString().split("T")[0] pero con dayjs.
+ * @return date in utc format ex: 2026-07-17
  */
 export function todayUTC(): ISODate {
   return dayjs.utc().format("YYYY-MM-DD");
@@ -30,6 +31,7 @@ export function todayUTC(): ISODate {
 
 /**
  * Timestamp actual en UTC.
+ * @return timestamp in utc format ex: 2026-07-17T13:32:32.567Z
  */
 export function nowUTC(): ISODateTime {
   return dayjs.utc().toISOString();
@@ -37,6 +39,7 @@ export function nowUTC(): ISODateTime {
 
 /**
  * Parsea una fecha ISO (con o sin tiempo) a dayjs en modo UTC.
+ * @return date in utc format ex: "2026-07-17"
  */
 function parseUTC(iso: ISODate | ISODateTime): dayjs.Dayjs {
   if (iso.includes("T")) {
@@ -47,6 +50,7 @@ function parseUTC(iso: ISODate | ISODateTime): dayjs.Dayjs {
 
 /**
  * Convierte un objeto dayjs UTC a string YYYY-MM-DD.
+ * @return date in iso format ex: "2026-07-17"
  */
 function toISODate(d: dayjs.Dayjs): ISODate {
   return d.format("YYYY-MM-DD");
@@ -54,6 +58,7 @@ function toISODate(d: dayjs.Dayjs): ISODate {
 
 /**
  * Suma/resta días a una fecha UTC.
+ * @return date in iso format ex: "2026-07-17"
  */
 export function addDaysUTC(iso: ISODate, days: number): ISODate {
   return toISODate(parseUTC(iso).add(days, "day"));
