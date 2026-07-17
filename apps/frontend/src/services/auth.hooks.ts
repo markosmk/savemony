@@ -12,6 +12,7 @@ export interface UserSession {
     currentSessionId: string;
   };
 }
+export type UserAuth = UserSession["user"];
 
 export const authService = {
   async getSession(): Promise<UserSession | null> {
