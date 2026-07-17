@@ -73,12 +73,12 @@ routes.get("/analytics", async (c) => {
 
   // Mapeo para los labels de gráfica de barras/líneas en React
   const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-  const monthlyData = monthNames.map((name, index) => {
+  const monthlyData = monthNames.map((month, index) => {
     const monthNum = String(index + 1).padStart(2, "0");
     const dbMatch = monthlyDataRaw.find((d) => d.month === monthNum);
     return {
-      name,
-      ahorrado: dbMatch ? Number(dbMatch.amount) : 0,
+      month,
+      amount: dbMatch ? Number(dbMatch.amount) : 0,
     };
   });
 

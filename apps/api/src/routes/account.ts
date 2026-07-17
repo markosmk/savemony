@@ -10,6 +10,7 @@ import { createProtectedRouter } from "../lib/hono";
 
 const routes = createProtectedRouter();
 
+// PUT /api/account
 routes.put("/", sValidator("json", profileUpdateSchema), async (c) => {
   try {
     const userSession = c.get("user");
@@ -28,14 +29,16 @@ routes.put("/", sValidator("json", profileUpdateSchema), async (c) => {
     const updated = await db.update(users).set(updates).where(eq(users.id, userSession.id)).returning().get();
 
     return c.json({
-      user: { id: updated?.id, email: updated?.email, name: updated?.name, role: updated?.role },
+      success: true,
+      user: { id: updated?.id, email: updated?.email, name: updated?.name },
     });
   } catch (err: unknown) {
     console.error("Profile update error:", err);
-    return c.json({ error: "Error interno del servidor. Intenta más tarde." }, 500);
+    return c.json({ success: false, error: "Error interno del servidor. Intenta más tarde." }, 500);
   }
 });
 
+// PUT /api/account/change-password
 routes.put("/change-password", sValidator("json", updatePasswordSchema), async (c) => {
   try {
     const userSession = c.get("user");
@@ -59,11 +62,12 @@ routes.put("/change-password", sValidator("json", updatePasswordSchema), async (
     const updated = await db.update(users).set(updates).where(eq(users.id, userSession.id)).returning().get();
 
     return c.json({
-      user: { id: updated?.id, email: updated?.email, name: updated?.name, role: updated?.role },
+      success: true,
+      user: { id: updated?.id, email: updated?.email, name: updated?.name },
     });
   } catch (err: unknown) {
     console.error("Profile update error:", err);
-    return c.json({ error: "Error interno del servidor. Intenta más tarde." }, 500);
+    return c.json({ success: false, error: "Error interno del servidor. Intenta más tarde." }, 500);
   }
 });
 
@@ -110,7 +114,7 @@ routes.delete("/", async (c) => {
     return c.json({ success: true, message: "Cuenta eliminada correctamente" });
   } catch (err: unknown) {
     console.error("Error al borrar cuenta:", err);
-    return c.json({ error: "Error interno al intentar eliminar la cuenta." }, 500);
+    return c.json({ success: false, error: "Error interno al intentar eliminar la cuenta." }, 500);
   }
 });
 
