@@ -15,6 +15,7 @@
 		"test": "pnpm -r run test",
 		"test:api": "pnpm --filter @savemony/api test",
 		"test:frontend": "pnpm --filter @savemony/frontend test",
+		"test:shared": "pnpm --filter @savemony/shared test",
 		"db:generate": "pnpm --filter @savemony/api db:generate",
 		"db:migrate": "pnpm --filter @savemony/api db:migrate",
 		"db:studio": "pnpm --filter @savemony/api db:studio",

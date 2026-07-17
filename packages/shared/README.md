@@ -33,3 +33,28 @@ De esta forma:
 - El Frontend solo conoce el contrato de la API (`packages/shared`).
 - El Backend valida la entrada de la API (`packages/shared`).
 - Las interfaces de datos complejos (`packages/types`) se comparten limpiamente.
+
+## Barriles internos y Punto de Entrada Único
+Al ser funciones utilitarias y código que no depende de librerías pesadas del navegador (como componentes de React), los bundlers modernos (Vite, Next.js, etc.) aplicarán **Tree Shaking** de forma sumamente eficiente. No habrá problemas de rendimiento. Ademas si existiera el caso de que exportaras dos types iguales, typescript dará error al instante.
+
+packages/shared/
+├── src/
+│   ├── constants/
+│   │   └── index.ts (exporta enums y constantes)
+│   ├── schemas/
+│   │   └── index.ts (exporta esquemas Valibot y sus InferTypes)
+│   ├── utils/
+│   │   ├── currency-helpers.ts
+│   │   ├── date-helpers.ts
+│   │   └── index.ts (reexporta currency y dates)
+│   ├── saving/
+│   │   └── index.ts (funciones y tipos específicos de saving)
+│   └── index.ts (EL PUNTO CENTRAL)
+├── package.json
+└── tsconfig.json
+
+
+### Tres Reglas de Oro para evitar problemas
+- **Exporta los Tipos de Valibot explícitamente:** Cuando se creen esquemas de Valibot, infiere y exporta los tipos en el mismo lugar para que el frontend los consuma directo.
+- **Cuidado con las dependencias del lado del servidor**: Asegurarse de que nada dentro de `shared` intente importar módulos nativos de Node.js (como `fs` o `crypto`). Si una utilidad de `saving/` usa algo exclusivo del Backend, romperá el Frontend al importar desde el `index.ts` común. Todo lo que esté en `shared` debe ser código isomórfico (que corra en cualquier lado).
+- **Usa export type si hay ambigüedad**: Si en algún momento hay archivos con interfaces puras de TypeScript que chocan en nombre con variables locales, se puede usar `export type * from './types'` para ayudar al compilador.
