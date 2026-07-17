@@ -11,7 +11,7 @@ import {
   startOfMonthUTC,
   startOfWeekUTC,
   todayUTC,
-} from "../utils/date-helpers-impl";
+} from "../utils/date-helpers";
 import type { Entry, ISODate } from "./types";
 
 export interface Plan {

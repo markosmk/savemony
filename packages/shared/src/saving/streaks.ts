@@ -1,4 +1,4 @@
-import { addDaysUTC, diffInDaysUTC, getDaysInMonth, todayISO } from "../utils/date-helpers-impl";
+import { addDaysUTC, diffInDaysUTC, getDaysInMonth, todayISO } from "../utils/date-helpers";
 import type { Entry, ISODate } from "./types";
 
 export interface StreakInfo {
