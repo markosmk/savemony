@@ -9,12 +9,10 @@ import { createProtectedRouter } from "../lib/hono";
 const routes = createProtectedRouter();
 
 const defaultSettings: Omit<SettingsInsert, "id" | "userId"> = {
-  currency: "USD",
   language: "en",
-  reminderEnabled: 1,
-  achievementNotifs: 1,
-  weeklySummary: 1,
-  locale: "en",
+  reminderEnabled: true,
+  achievementNotifs: true,
+  weeklySummary: true,
 } as const;
 
 routes.get("/", async (c) => {
@@ -27,7 +25,7 @@ routes.get("/", async (c) => {
     return c.json({ success: true, settings: userSettings });
   }
 
-  // Usamos try/catch por si otra request paralela ya la creó (race condition)
+  // try/catch por si otra request paralela ya la creó (race condition)
   try {
     const newSettings = await db
       .insert(settings)
@@ -64,15 +62,14 @@ routes.put("/", sValidator("json", settingsUpdateSchema), async (c) => {
     }
 
     const updates: SettingsUpdate = {
-      currency: data.currency,
       language: data.language,
-      reminderEnabled: data.reminderEnabled ? 1 : 0,
-      achievementNotifs: data.achievementNotifs ? 1 : 0,
-      weeklySummary: data.weeklySummary ? 1 : 0,
+      reminderEnabled: !!data.reminderEnabled,
+      achievementNotifs: !!data.achievementNotifs,
+      weeklySummary: !!data.weeklySummary,
     };
 
     // Opcionales solo si vienen
-    if (data.locale !== undefined) updates.locale = data.locale;
+    // if (data.locale !== undefined) updates.locale = data.locale;
     // if (data.onboardingCompleted !== undefined) updates.onboardingCompleted = data.onboardingCompleted ? 1 : 0;
 
     const updated = await db.update(settings).set(updates).where(eq(settings.userId, userSession.id)).returning().get();
