@@ -11,12 +11,13 @@ import { and, eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 
 import { getDB } from "../db";
-import { referral, session, user, type VerificationInsert, verification } from "../db/schemas";
+import { referrals, sessions, users, type VerificationInsert, verifications } from "../db/schemas";
 import { generateSecureToken } from "../lib/crypto";
 import { sendEmail } from "../lib/email";
 import { hashPassword, hashToken, verifyPassword } from "../lib/hash";
 import { createPublicRouter } from "../lib/hono";
-import { authMiddleware, createSession, revokeSession } from "../middlewares/auth";
+import { authMiddleware } from "../middlewares/auth";
+import { createSession, revokeSession } from "../services/session";
 
 const routes = createPublicRouter();
 
@@ -27,7 +28,7 @@ routes.post("/register", sValidator("json", registerSchema), async (c) => {
     const resendKey = c.env.RESEND_API_KEY;
     const frontendUrl = c.env.FRONTEND_URL;
 
-    const existingUser = await db.select().from(user).where(eq(user.email, email.toLowerCase())).get();
+    const existingUser = await db.select().from(users).where(eq(users.email, email.toLowerCase())).get();
     if (existingUser) {
       return c.json({ error: "El email ya está registrado" }, 400);
     }
@@ -36,7 +37,7 @@ routes.post("/register", sValidator("json", registerSchema), async (c) => {
     const passwordHash = await hashPassword(password);
 
     // create user
-    await db.insert(user).values({
+    await db.insert(users).values({
       id: newUserId,
       email: email.toLowerCase(),
       passwordHash,
@@ -47,7 +48,7 @@ routes.post("/register", sValidator("json", registerSchema), async (c) => {
     const plainToken = generateSecureToken();
     const tokenHash = await hashToken(plainToken);
 
-    await db.insert(verification).values({
+    await db.insert(verifications).values({
       id: crypto.randomUUID(),
       userId: newUserId,
       type: "email_verification",
@@ -69,9 +70,9 @@ routes.post("/register", sValidator("json", registerSchema), async (c) => {
 
     if (referredBy) {
       // Verificar que el referente existe
-      const referrerExists = await db.select().from(user).where(eq(user.id, referredBy)).get();
+      const referrerExists = await db.select().from(users).where(eq(users.id, referredBy)).get();
       if (referrerExists) {
-        await db.insert(referral).values({
+        await db.insert(referrals).values({
           id: crypto.randomUUID(),
           referrerId: referredBy,
           referredId: newUserId,
@@ -93,9 +94,9 @@ routes.post("/login", sValidator("json", loginSchema), async (c) => {
     const { email, password } = c.req.valid("json");
 
     const db = getDB(c.env.DB);
-    const userDb = await db.select().from(user).where(eq(user.email, email.toLowerCase())).get();
+    const userDb = await db.select().from(users).where(eq(users.email, email.toLowerCase())).get();
     if (!userDb?.passwordHash) {
-      return c.json({ error: "Credenciales inválidas" }, 401);
+      return c.json({ error: "Credenciales inválidassss" }, 401);
     }
 
     const valid = await verifyPassword(password, userDb.passwordHash);
@@ -138,7 +139,7 @@ routes.get("/sessions/:userId", authMiddleware, async (c) => {
     return c.json({ error: "ID de usuario requerido" }, 400);
   }
   const db = getDB(c.env.DB);
-  const list = await db.select().from(session).where(eq(session.userId, userId)).all();
+  const list = await db.select().from(sessions).where(eq(sessions.userId, userId)).all();
   return c.json(list);
 });
 
@@ -146,7 +147,7 @@ routes.post("/sessions/revoke", authMiddleware, sValidator("json", sessionRevoke
   try {
     const { sessionId } = c.req.valid("json") as { sessionId: string };
     const db = getDB(c.env.DB);
-    await db.delete(session).where(eq(session.id, sessionId));
+    await db.delete(sessions).where(eq(sessions.id, sessionId));
     return c.json({ success: true });
   } catch (err: unknown) {
     console.error("Session revoke error:", err);
@@ -161,14 +162,14 @@ routes.post("/verify-email/request", authMiddleware, async (c) => {
   const resendKey = c.env.RESEND_API_KEY;
 
   // Si ya está verificado, no molestar
-  const me = await db.select().from(user).where(eq(user.id, userId)).get();
+  const me = await db.select().from(users).where(eq(users.id, userId)).get();
   if (!me) return c.json({ error: "Usuario no encontrado" }, 404);
   if (me.emailVerified) return c.json({ error: "Email ya verificado" }, 400);
 
   // Invalidar tokens anteriores del mismo tipo
   await db
-    .delete(verification)
-    .where(and(eq(verification.userId, user.id), eq(verification.type, "email_verification")));
+    .delete(verifications)
+    .where(and(eq(verifications.userId, users.id), eq(verifications.type, "email_verification")));
 
   const plainToken = generateSecureToken();
   const tokenHash = await hashToken(plainToken);
@@ -182,7 +183,7 @@ routes.post("/verify-email/request", authMiddleware, async (c) => {
     expiresAt,
   };
 
-  await db.insert(verification).values(verifyData);
+  await db.insert(verifications).values(verifyData);
 
   const verifyUrl = `${frontendUrl}/verify-email?token=${tokenHash}`;
 
@@ -205,8 +206,8 @@ routes.post("/verify-email/confirm", sValidator("json", confirmEmailSchema), asy
   const tokenHash = await hashToken(token);
   const record = await db
     .select()
-    .from(verification)
-    .where(and(eq(verification.token, tokenHash), eq(verification.type, "email_verification")))
+    .from(verifications)
+    .where(and(eq(verifications.token, tokenHash), eq(verifications.type, "email_verification")))
     .get();
 
   if (!record) return c.json({ error: "Token inválido" }, 400);
@@ -216,10 +217,13 @@ routes.post("/verify-email/confirm", sValidator("json", confirmEmailSchema), asy
   }
 
   // Marcar email verificado
-  await db.update(user).set({ emailVerified: true, updatedAt: new Date() }).where(eq(user.id, record.userId));
+  await db
+    .update(users)
+    .set({ emailVerified: true, updatedAt: new Date().toISOString() })
+    .where(eq(users.id, record.userId));
 
   // Marcar token usado
-  await db.update(verification).set({ usedAt: new Date().toISOString() }).where(eq(verification.id, record.id));
+  await db.update(verifications).set({ usedAt: new Date().toISOString() }).where(eq(verifications.id, record.id));
 
   return c.json({ success: true });
 });
@@ -233,7 +237,7 @@ routes.post("/forgot-password", sValidator("json", forgotPasswordSchema), async 
 
   // IMPORTANTE: Siempre devolver 200, aunque el email no exista
   // para evitar enumeración de usuarios
-  const targetUser = await db.select().from(user).where(eq(user.email, email.toLowerCase())).get();
+  const targetUser = await db.select().from(users).where(eq(users.email, email.toLowerCase())).get();
 
   if (!targetUser) {
     console.log("intentando resertear contraseña, No existe el usuario", email);
@@ -242,14 +246,14 @@ routes.post("/forgot-password", sValidator("json", forgotPasswordSchema), async 
 
   // Invalidar tokens previos
   await db
-    .delete(verification)
-    .where(and(eq(verification.userId, targetUser.id), eq(verification.type, "password_reset")));
+    .delete(verifications)
+    .where(and(eq(verifications.userId, targetUser.id), eq(verifications.type, "password_reset")));
 
   const plainToken = generateSecureToken();
   const tokenHash = await hashToken(plainToken);
   const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // 1h
 
-  await db.insert(verification).values({
+  await db.insert(verifications).values({
     id: crypto.randomUUID(),
     userId: targetUser.id,
     type: "password_reset",
@@ -278,8 +282,8 @@ routes.post("/reset-password", sValidator("json", resetPasswordSchema), async (c
   const tokenHash = await hashToken(token);
   const record = await db
     .select()
-    .from(verification)
-    .where(and(eq(verification.token, tokenHash), eq(verification.type, "password_reset")))
+    .from(verifications)
+    .where(and(eq(verifications.token, tokenHash), eq(verifications.type, "password_reset")))
     .get();
 
   if (!record) return c.json({ error: "Token inválido" }, 400);
@@ -290,9 +294,9 @@ routes.post("/reset-password", sValidator("json", resetPasswordSchema), async (c
 
   const passwordHash = await hashPassword(newPassword);
 
-  await db.update(user).set({ passwordHash, updatedAt: new Date() }).where(eq(user.id, record.userId));
+  await db.update(users).set({ passwordHash, updatedAt: new Date().toISOString() }).where(eq(users.id, record.userId));
 
-  await db.update(verification).set({ usedAt: new Date().toISOString() }).where(eq(verification.id, record.id));
+  await db.update(verifications).set({ usedAt: new Date().toISOString() }).where(eq(verifications.id, record.id));
 
   return c.json({ success: true });
 });

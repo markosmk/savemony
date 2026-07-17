@@ -1,9 +1,10 @@
 import { sValidator } from "@hono/standard-validator";
-import { profileUpdatePasswordSchema, profileUpdateSchema } from "@savemony/shared";
+import { profileUpdateSchema, updatePasswordSchema } from "@savemony/shared";
 import { eq } from "drizzle-orm";
+import { deleteCookie } from "hono/cookie";
 
 import { getDB } from "../db";
-import { user } from "../db/schemas";
+import { plans, sessions, settings, users } from "../db/schemas";
 import { hashPassword, verifyPassword } from "../lib/hash";
 import { createProtectedRouter } from "../lib/hono";
 
@@ -15,7 +16,7 @@ routes.put("/", sValidator("json", profileUpdateSchema), async (c) => {
     const { name, email } = c.req.valid("json");
     const db = getDB(c.env.DB);
 
-    const userDB = await db.select().from(user).where(eq(user.id, userSession.id)).get();
+    const userDB = await db.select().from(users).where(eq(users.id, userSession.id)).get();
     if (!userDB?.passwordHash) {
       return c.json({ error: "Usuario no encontrado" }, 404);
     }
@@ -24,7 +25,7 @@ routes.put("/", sValidator("json", profileUpdateSchema), async (c) => {
     if (name) updates.name = name;
     if (email) updates.email = email;
 
-    const updated = await db.update(user).set(updates).where(eq(user.id, userSession.id)).returning().get();
+    const updated = await db.update(users).set(updates).where(eq(users.id, userSession.id)).returning().get();
 
     return c.json({
       user: { id: updated?.id, email: updated?.email, name: updated?.name, role: updated?.role },
@@ -35,12 +36,12 @@ routes.put("/", sValidator("json", profileUpdateSchema), async (c) => {
   }
 });
 
-routes.put("/change-password", sValidator("json", profileUpdatePasswordSchema), async (c) => {
+routes.put("/change-password", sValidator("json", updatePasswordSchema), async (c) => {
   try {
     const userSession = c.get("user");
     const { currentPassword, newPassword } = c.req.valid("json");
     const db = getDB(c.env.DB);
-    const userDB = await db.select().from(user).where(eq(user.id, userSession.id)).get();
+    const userDB = await db.select().from(users).where(eq(users.id, userSession.id)).get();
     if (!userDB?.passwordHash) {
       return c.json({ error: "Usuario no encontrado" }, 404);
     }
@@ -55,7 +56,7 @@ routes.put("/change-password", sValidator("json", profileUpdatePasswordSchema), 
     const updates: { passwordHash?: string } = {};
     if (newPassword) updates.passwordHash = await hashPassword(newPassword);
 
-    const updated = await db.update(user).set(updates).where(eq(user.id, userSession.id)).returning().get();
+    const updated = await db.update(users).set(updates).where(eq(users.id, userSession.id)).returning().get();
 
     return c.json({
       user: { id: updated?.id, email: updated?.email, name: updated?.name, role: updated?.role },
@@ -73,5 +74,44 @@ routes.put("/change-password", sValidator("json", profileUpdatePasswordSchema), 
 // - Borrar achievements
 // - Borrar user
 // - Invalidar cookie
+routes.delete("/", async (c) => {
+  try {
+    const userSession = c.get("user");
+    const db = getDB(c.env.DB);
+
+    // Es altamente recomendable usar una transacción para que, si algo falla a la mitad,
+    // no dejes la base de datos inconsistente.
+    await db.transaction(async (tx) => {
+      // 1. Borrar planes (y sus tablas hijas relacionadas como cells o timeline
+      // si Drizzle o tu BD no tienen ON DELETE CASCADE).
+      // await tx.delete(planTimeline).where(eq(planTimeline.userId, userSession.id));
+      // await tx.delete(planCell).where(eq(planCell.userId, userSession.id));
+      await tx.delete(plans).where(eq(plans.userId, userSession.id));
+
+      // 3. Borrar settings
+      await tx.delete(settings).where(eq(settings.userId, userSession.id));
+
+      // 4. Borrar sesiones activas (para que cierre sesión en todos sus dispositivos)
+      await tx.delete(sessions).where(eq(sessions.userId, userSession.id));
+
+      // 5. Finalmente, borrar el usuario
+      await tx.delete(users).where(eq(users.id, userSession.id));
+    });
+
+    // 6. Invalidar la cookie en el navegador del cliente
+    // Cambia "auth_session" por el nombre real de la cookie que uses en tu app
+    deleteCookie(c, "auth_session", {
+      path: "/",
+      secure: c.env.ENVIRONMENT === "production",
+      httpOnly: true,
+      sameSite: "Lax",
+    });
+
+    return c.json({ success: true, message: "Cuenta eliminada correctamente" });
+  } catch (err: unknown) {
+    console.error("Error al borrar cuenta:", err);
+    return c.json({ error: "Error interno al intentar eliminar la cuenta." }, 500);
+  }
+});
 
 export default routes;
