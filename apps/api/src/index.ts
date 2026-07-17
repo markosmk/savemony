@@ -4,15 +4,12 @@ import { secureHeaders } from "hono/secure-headers";
 
 import { rateLimit } from "./middlewares/rate-limit";
 import accountRoutes from "./routes/account";
-import achievementRoutes from "./routes/achievements";
 import authRoutes from "./routes/auth";
-import cellsRoutes from "./routes/cells";
-import challengesRouter from "./routes/challenges";
+import entriesRouter from "./routes/entries";
 import plansRoutes from "./routes/plans";
 import settingsRoutes from "./routes/settings";
 import setupRouter from "./routes/setup";
 import statsRouter from "./routes/stats";
-import timelineRoutes from "./routes/timeline";
 import { AppError } from "./types";
 
 export const app = new Hono<{ Bindings: { DB: D1Database; ENVIRONMENT: string } }>();
@@ -44,10 +41,7 @@ app.route("/api/auth", authRoutes);
 app.route("/api/account", accountRoutes);
 app.route("/api/settings", settingsRoutes);
 app.route("/api/plans", plansRoutes);
-app.route("/api/cells", cellsRoutes);
-app.route("/api/timeline", timelineRoutes);
-app.route("/api/achievements", achievementRoutes);
-app.route("/api/challenges", challengesRouter);
+app.route("/api/plans/:planId/entries", entriesRouter);
 app.route("/api/stats", statsRouter);
 app.route("/setup", setupRouter);
 
