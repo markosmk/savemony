@@ -11,8 +11,8 @@ dayjs.extend(relativeTime);
 dayjs.extend(isSameOrBefore);
 dayjs.locale("es");
 
-export type ISODate = string; // "2026-07-16"
-export type ISODateTime = string; // "2026-07-16T10:00:00.000Z"
+type ISODate = string; // "2026-07-16"
+type ISODateTime = string; // "2026-07-16T10:00:00.000Z"
 
 const DEFAULT_TIMEZONE = "America/Argentina/Buenos_Aires";
 
