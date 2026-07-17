@@ -50,7 +50,7 @@ routes.post("/", async (c) => {
   //     })
   //     .onConflictDoNothing({ target: challenges.key });
   // }
-  return c.json({ success: true, message: "Challenges seeded successfully" });
+  return c.json({ success: true, message: "Users seeded successfully" });
 });
 
 export default routes;
