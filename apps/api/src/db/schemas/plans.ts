@@ -1,3 +1,4 @@
+import type { FrequencyType } from "@savemony/shared";
 import { relations } from "drizzle-orm";
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -41,7 +42,11 @@ export const planRelations = relations(plans, ({ many }) => ({
 
 export type PlanSelect = typeof plans.$inferSelect;
 export type PlanInsert = typeof plans.$inferInsert;
-export type PlanUpdate = Omit<PlanInsert, "id" | "userId" | "createdAt" | "updatedAt">;
+export type PlanUpdate = Omit<PlanInsert, "id" | "userId" | "createdAt"> & {
+  // updatedAt?: string;
+  name?: string;
+  frequencyType?: FrequencyType;
+};
 
 export const entries = sqliteTable(
   "entries",
@@ -57,6 +62,9 @@ export const entries = sqliteTable(
     type: text("type", { enum: ["deposit", "withdrawal"] }).notNull(),
     reason: text("reason"), // motivo del retiro (opcional para depósitos)
     createdAt: text("created_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()), // nowUTC()), // Siempre UTC
+    updatedAt: text("updated_at")
       .notNull()
       .$defaultFn(() => new Date().toISOString()),
   },
