@@ -30,9 +30,9 @@ export const profileUpdateSchema = v.object({
   name: v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres.")),
   email: v.pipe(v.string(), v.email()),
 });
-export type ProfileUpdateInput = v.InferOutput<typeof profileUpdateSchema>;
+export type ProfileUpdatePayload = v.InferOutput<typeof profileUpdateSchema>;
 
-export const profileUpdatePasswordSchema = v.pipe(
+export const updatePasswordSchema = v.pipe(
   v.object({
     currentPassword: v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres.")),
     newPassword: v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres.")),
@@ -48,13 +48,4 @@ export const profileUpdatePasswordSchema = v.pipe(
   ),
 );
 
-export type ProfileUpdatePasswordInput = v.InferOutput<typeof profileUpdatePasswordSchema>;
-
-export const profileSchema = v.object({
-  name: v.optional(v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres."))),
-  email: v.optional(v.pipe(v.string(), v.email())),
-  currentPassword: v.optional(v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres."))),
-  newPassword: v.optional(v.pipe(v.string(), v.minLength(4, "Mínimo 4 caracteres."))),
-});
-
-export type ProfileInput = v.InferOutput<typeof profileSchema>;
+export type UpdatePasswordPayload = v.InferOutput<typeof updatePasswordSchema>;
