@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const referrals = sqliteTable("referrals", {
@@ -8,7 +7,7 @@ export const referrals = sqliteTable("referrals", {
   referrerId: text("referrer_id").notNull(), // El usuario que envió la invitación
   referredId: text("referred_id").notNull().unique(), // El usuario que se registró (1 por persona)
   status: text("status").notNull().default("pending"), // 'pending' | 'completed' | 'rewarded'
-  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at").$defaultFn(() => new Date().toISOString()),
   completedAt: text("completed_at"), // Se llena al completar la 1ra celda
 });
 

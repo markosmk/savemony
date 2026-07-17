@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { users } from "./auth";
@@ -11,15 +11,24 @@ export const settings = sqliteTable("settings", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" })
     .unique(),
-  currency: text("currency").notNull().default("CLP"),
-  locale: text("locale").notNull().default("en"),
-  language: text("language").notNull().default("en"),
-  reminderEnabled: integer("reminder_enabled").notNull().default(1), // 1 = true, 0 = false
-  achievementNotifs: integer("achievement_notifs").notNull().default(1),
-  weeklySummary: integer("weekly_summary").notNull().default(1),
-  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  language: text("language").notNull().default("es"),
+  reminderEnabled: integer("reminder_enabled", { mode: "boolean" }).notNull().default(true),
+  achievementNotifs: integer("achievement_notifs", { mode: "boolean" }).notNull().default(true),
+  weeklySummary: integer("weekly_summary", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
 });
+
+export const settingsRelations = relations(settings, ({ one }) => ({
+  user: one(users, {
+    fields: [settings.userId],
+    references: [users.id],
+  }),
+}));
 
 export type Settings = typeof settings.$inferSelect;
 export type SettingsInsert = typeof settings.$inferInsert;

@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import { users } from "./auth";
@@ -15,7 +14,9 @@ export const challenges = sqliteTable("challenges", {
   durationDays: integer("duration_days"), // null = ilimitado
   rewardPoints: integer("reward_points").notNull().default(0),
   isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at").default(sql`CURRENT_TIMESTAMP`),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
 });
 
 export const userChallenges = sqliteTable(
@@ -32,10 +33,12 @@ export const userChallenges = sqliteTable(
       .references(() => challenges.id, { onDelete: "cascade" }),
     status: text("status").notNull().default("active"), // 'active', 'completed', 'failed', 'cancelled'
     currentProgress: integer("current_progress").notNull().default(0),
-    startedAt: text("started_at").default(sql`CURRENT_TIMESTAMP`),
+    startedAt: text("started_at").$defaultFn(() => new Date().toISOString()),
     completedAt: text("completed_at"),
     expiresAt: text("expires_at"), // ISO string si tenía duration_days
-    updatedAt: text("updated_at").default(sql`CURRENT_TIMESTAMP`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .$defaultFn(() => new Date().toISOString()),
   },
   (table) => [uniqueIndex("user_challenge_unique_idx").on(table.userId, table.challengeId)],
 );
