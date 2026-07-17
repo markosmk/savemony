@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 
 // Mock de D1
-const mockDb = {
+const _mockDb = {
   insert: vi.fn(() => ({ values: vi.fn(() => ({ returning: vi.fn(() => [{ id: "plan-123" }]) })) })),
   select: vi.fn(() => ({
     from: vi.fn(() => ({ where: vi.fn(() => ({ get: vi.fn(() => null), all: vi.fn(() => []) })) })),

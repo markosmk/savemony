@@ -1,473 +1,135 @@
-import { sValidator } from "@hono/standard-validator";
-import {
-  createPlanSchema,
-  type PlanDetailDTO,
-  type PlanDTO,
-  timelineEntrySchema,
-  updatePlanSchema,
-} from "@savemony/shared";
-import { and, eq, sql } from "drizzle-orm";
+// import { sValidator } from "@hono/standard-validator";
+import { type FrequencyType, planCreationSchema, todayUTC, updatePlanSchema } from "@savemony/shared";
+import { desc, eq } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
 
 import { getDB } from "../db";
-import { type CellInsert, cell, plan, timeline } from "../db/schemas";
+import { entries, type PlanUpdate, plans } from "../db/schemas";
+import { generateId } from "../lib/generate-id";
 import { createProtectedRouter } from "../lib/hono";
-import { generateGrid, rebalanceCells } from "../services/plans.utils";
+import { validateBody } from "../lib/validation";
+import { updatePlanStatus, verifyPlanOwnership } from "../services/plans.repository";
 
 const routes = createProtectedRouter();
 
-// ========== GET /plans ==========
+// GET /api/plans
 routes.get("/", async (c) => {
-  const user = c.get("user");
+  const userId = c.get("user")?.id;
   const db = getDB(c.env.DB);
-
-  const userPlans = await db
-    .select({
-      id: plan.id,
-      title: plan.title,
-      description: plan.description,
-      category: plan.category,
-      targetAmount: plan.targetAmount,
-      currentAmount: plan.currentAmount,
-      method: plan.method,
-      status: plan.status,
-      streak: plan.streak,
-      archived: plan.archived,
-      createdAt: plan.createdAt,
-      totalCells: sql<number>`CAST(count(${cell.id}) AS INTEGER)`,
-      completedCells: sql<number>`CAST(sum(case when ${cell.status} = 'completed' then 1 else 0 end) AS INTEGER)`,
-    })
-    .from(plan)
-    .leftJoin(cell, eq(plan.id, cell.planId))
-    .where(and(eq(plan.userId, user.id), eq(plan.archived, 0)))
-    .groupBy(plan.id)
-    .all();
-
-  const plansWithProgress = userPlans.map((p) => ({
-    ...p,
-    progressPercent: p.targetAmount > 0 ? Math.round((p.currentAmount / p.targetAmount) * 100) : 0,
-  }));
-
-  //
-  return c.json<PlanDTO[]>(plansWithProgress);
+  const userPlans = await db.select().from(plans).where(eq(plans.userId, userId)).orderBy(desc(plans.createdAt));
+  return c.json({ plans: userPlans });
 });
 
-// ========== GET /plans/:id ==========
+// GET /api/plans/:id
 routes.get("/:id", async (c) => {
-  const user = c.get("user");
-  const id = c.req.param("id");
-  const db = getDB(c.env.DB);
+  const planId = c.req.param("id");
 
-  const planData = await db.query.plan.findFirst({
-    where: and(eq(plan.id, id), eq(plan.userId, user.id)),
-    columns: {
-      id: true,
-      title: true,
-      description: true,
-      category: true,
-      targetAmount: true,
-      currentAmount: true,
-      method: true,
-      status: true,
-      gridCols: true,
-      gridRows: true,
-      streak: true,
-      lastSaveDate: true,
-      archived: true,
-      deadline: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    with: {
-      cells: {
-        orderBy: (cells, { asc }) => [asc(cells.position)],
-        columns: {
-          id: true,
-          position: true,
-          amount: true,
-          status: true,
-          completedAt: true,
-          isLockedAmount: true,
-        },
-      },
-      timelines: {
-        orderBy: (timelines, { desc }) => [desc(timelines.createdAt)],
-        limit: 1,
-        columns: {
-          id: true,
-          description: true,
-          type: true,
-          amount: true,
-          date: true,
-          metadata: true,
-          createdAt: true,
-        },
-      },
-    },
-  });
+  const plan = await verifyPlanOwnership(c, planId);
 
-  if (!planData) return c.json({ success: false, error: "Plan no encontrado" }, 404);
+  if (typeof plan.customDays === "string") {
+    plan.customDays = JSON.parse(plan.customDays);
+  }
+  if (typeof plan.quickAmounts === "string") {
+    plan.quickAmounts = JSON.parse(plan.quickAmounts);
+  }
 
-  return c.json<PlanDetailDTO>({
-    ...planData,
-    completedCells: planData.cells.filter((c) => c.status === "completed").length,
-    totalCells: planData.cells.length,
-    progressPercent: planData.targetAmount > 0 ? Math.round((planData.currentAmount / planData.targetAmount) * 100) : 0,
-  });
+  return c.json({ plan });
 });
 
-// ========== POST /plans/ ==========
-routes.post("/", sValidator("json", createPlanSchema), async (c) => {
-  const data = c.req.valid("json");
-  const user = c.get("user");
+// GET /api/plans/:id/summary — with entries and statistics
+routes.get("/:id/summary", async (c) => {
+  const planId = c.req.param("id");
+  if (!planId) throw new HTTPException(400, { message: "ID de plan es requerido" });
+
+  const plan = await verifyPlanOwnership(c, planId);
+
   const db = getDB(c.env.DB);
-
-  const rows = data.gridRows ?? 6;
-  const cols = data.gridCols ?? 7;
-  const totalCells = rows * cols;
-  const target = Number(data.targetAmount);
-  const minAmount = Number(data.minAmount) || 0;
-  const maxAmount = Number(data.maxAmount) || 0;
-  const preferredAmounts = (data.preferredAmounts || []).map(Number);
-
-  // ── Validaciones de negocio ───────────────────────────────
-
-  // 1. Mínimo no puede ser mayor que el máximo (si ambos están definidos)
-  if (minAmount > 0 && maxAmount > 0 && minAmount > maxAmount) {
-    return c.json({ error: "El monto mínimo no puede ser mayor que el máximo" }, 400);
-  }
-
-  // 2. Si hay mínimo, el total mínimo posible debe caber en el target
-  if (minAmount > 0) {
-    const minTotalPossible = minAmount * totalCells;
-    if (minTotalPossible > target) {
-      return c.json(
-        {
-          error: `Con ${totalCells} celdas y mínimo de ${minAmount}, el total mínimo es ${minTotalPossible}. Tu meta es ${target}. Reducí el mínimo o aumentá la meta.`,
-        },
-        400,
-      );
-    }
-  }
-
-  // 3. Si hay máximo, el total máximo posible debe alcanzar el target
-  if (maxAmount > 0) {
-    const maxTotalPossible = maxAmount * totalCells;
-    if (maxTotalPossible < target) {
-      return c.json(
-        {
-          error: `Con ${totalCells} celdas y máximo de ${maxAmount}, el total máximo es ${maxTotalPossible}. Tu meta es ${target}. Aumentá el máximo o reducí la meta.`,
-        },
-        400,
-      );
-    }
-  }
-
-  // 4. Validación específica por método
-  if (data.method === "52_weeks" && totalCells !== 52) {
-    return c.json({ error: "El método 52 semanas requiere exactamente 52 celdas (ej: 4×13 o 2×26)" }, 400);
-  }
-  if (data.method === "100_envelopes" && totalCells !== 100) {
-    return c.json({ error: "El método 100 sobres requiere exactamente 100 celdas (10×10)" }, 400);
-  }
-  if (data.method === "3_months" && totalCells !== 90) {
-    return c.json({ error: "El método 3 meses requiere exactamente 90 celdas" }, 400);
-  }
-
-  const newPlanId = crypto.randomUUID();
-
-  try {
-    // 3. Generar montos de celdas
-    const amounts = generateGrid({
-      method: data.method || "custom_grid",
-      target,
-      rows,
-      cols,
-      minAmount,
-      maxAmount,
-      preferredAmounts,
-      roundingMultiple: data.roundingMultiple || 1,
-      amountMode: data.amountMode || "range",
-    });
-
-    // Verificación final: la suma debe ser EXACTAMENTE el target
-    const sum = amounts.reduce((a, b) => a + b, 0);
-    if (sum !== target) {
-      console.error(`[PLAN CREATE] Suma incorrecta: ${sum} vs target ${target}`);
-      return c.json({ error: "Error interno al generar el plan. Intentá de nuevo." }, 500);
-    }
-
-    // Validación de usabilidad: ninguna celda debería ser > 5× el promedio
-    // ni < 0.1× el promedio (a menos que sea necesario)
-    const avg = target / totalCells;
-    const maxAllowed = Math.min(maxAmount || Infinity, avg * 5);
-    const minAllowed = Math.max(minAmount || 1, avg * 0.1);
-
-    const outliers = amounts.filter((a) => a > maxAllowed || a < minAllowed);
-    if (outliers.length > totalCells * 0.3) {
-      // más del 30% son outliers
-      return c.json(
-        {
-          error: `Con estos parámetros la distribución es muy desigual. 
-            El monto promedio por celda sería ${Math.round(avg)}. 
-            Ajustá el máximo a ~${Math.round(avg * 3)} o aumentá la meta.`,
-        },
-        400,
-      );
-    }
-
-    // 4. Insertar plan
-    const [planNew] = await db
-      .insert(plan)
-      .values({
-        id: newPlanId,
-        userId: user.id,
-        title: data.title,
-        description: data.description,
-        targetAmount: data.targetAmount,
-        gridRows: data.gridRows ?? 6,
-        gridCols: data.gridCols ?? 7,
-        category: data.category,
-        deadline: data.deadline,
-        method: data.method || "custom_grid",
-        rebalanceMode: data.rebalanceMode || "proportional",
-        frequency: data.frequency || "daily",
-        minAmount: data.minAmount ?? 0,
-        maxAmount: data.maxAmount ?? 0,
-      })
-      .returning();
-    if (!planNew) throw new Error("No se pudo crear el plan");
-
-    // 5. celdas asociadas
-    const cellsData: CellInsert[] = amounts.map((amount, index) => ({
-      id: crypto.randomUUID(),
-      planId: newPlanId,
-      position: index,
-      amount: amount,
-      status: "pending",
-      isLockedAmount: 0,
-    }));
-
-    // 5. Insertar celdas con D1 batch (cada celda = 1 statement, 6 variables)
-    const cellInserts = cellsData.map((c) => db.insert(cell).values(c));
-
-    // D1 hard limit: 100 statements per batch
-    for (let i = 0; i < cellInserts.length; i += 100) {
-      const chunk = cellInserts.slice(i, i + 100);
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation >
-      await db.batch(chunk as any);
-    }
-
-    // 6. Timeline entry inicial
-    await db.insert(timeline).values({
-      planId: newPlanId,
-      type: "note",
-      description: `Plan "${data.title}" creado con ${amounts.length} celdas`,
-    });
-
-    return c.json({ success: true, id: newPlanId }, 201);
-  } catch (err) {
-    // Limpieza best-effort
-    console.error("[PLAN CREATE] Error, intentando limpiar plan", newPlanId);
-    await db
-      .delete(plan)
-      .where(eq(plan.id, newPlanId))
-      .catch(() => {});
-    throw err;
-  }
-});
-
-// ========== PATCH /plans/:id ==========
-routes.patch("/:id", sValidator("json", updatePlanSchema), async (c) => {
-  const { id } = c.req.param();
-  const body = c.req.valid("json");
-  const user = c.get("user");
-  const db = getDB(c.env.DB);
-
-  // Verificar ownership
-  const existing = await db
-    .select()
-    .from(plan)
-    .where(and(eq(plan.id, id), eq(plan.userId, user.id)))
-    .get();
-
-  if (!existing) return c.json({ error: "Plan no encontrado" }, 404);
-
-  const updateData: Record<string, unknown> = {};
-  if (body.title !== undefined) updateData.title = body.title;
-  if (body.description !== undefined) updateData.description = body.description;
-  if (body.icon !== undefined) updateData.icon = body.icon;
-  if (body.status !== undefined) updateData.status = body.status;
-  if (body.targetAmount !== undefined) updateData.targetAmount = body.targetAmount;
-  if (body.deadline !== undefined) updateData.deadline = body.deadline;
-  if (body.rebalanceMode !== undefined) updateData.rebalanceMode = body.rebalanceMode;
-  if (body.category !== undefined) updateData.category = body.category;
-  if (body.archived !== undefined) updateData.archived = body.archived ? 1 : 0;
-
-  if (Object.keys(updateData).length === 0) {
-    return c.json({ error: "No hay campos para actualizar" }, 400);
-  }
-
-  await db.update(plan).set(updateData).where(eq(plan.id, id));
-
-  return c.json({ success: true });
-});
-
-// ========== DELETE /plans/:id ==========
-routes.delete("/:id", async (c) => {
-  const { id } = c.req.param();
-  const user = c.get("user");
-  const db = getDB(c.env.DB);
-
-  const existing = await db
-    .select()
-    .from(plan)
-    .where(and(eq(plan.id, id), eq(plan.userId, user.id)))
-    .get();
-
-  if (!existing) return c.json({ error: "Plan no encontrado" }, 404);
-
-  await db.delete(plan).where(eq(plan.id, id));
-
-  return c.json({ success: true });
-});
-
-// ========== POST /plans/:id/rebalance ==========
-routes.post("/:id/rebalance", async (c) => {
-  const { id } = c.req.param();
-  const user = c.get("user");
-  const db = getDB(c.env.DB);
-
-  const planData = await db
-    .select()
-    .from(plan)
-    .where(and(eq(plan.id, id), eq(plan.userId, user.id)))
-    .get();
-
-  if (!planData) return c.json({ error: "Plan no encontrado" }, 404);
-
-  const cellsData = await db.select().from(cell).where(eq(cell.planId, id)).all();
-
-  const pendingCells = cellsData.filter((c) => c.status === "pending");
-
-  if (pendingCells.length === 0) {
-    return c.json({ error: "No hay celdas pendientes para rebalancear" }, 400);
-  }
-
-  const newAmounts = rebalanceCells({
-    cells: cellsData.map((c) => ({
-      id: c.id,
-      amount: c.amount,
-      status: c.status,
-      isLocked: c.isLockedAmount,
-    })),
-    totalTarget: Number(planData.targetAmount),
-    mode: (planData.rebalanceMode as "proportional" | "random") || "proportional",
-    minAmount: Number(planData.minAmount) || 0,
-    maxAmount: Number(planData.maxAmount) || 0,
-  });
-
-  // update cells pending (no transaction D1)
-  for (const item of newAmounts) {
-    const original = cellsData.find((c) => c.id === item.id);
-    if (original && original.status === "pending" && !original.isLockedAmount && original.amount !== item.amount) {
-      await db.update(cell).set({ amount: item.amount }).where(eq(cell.id, item.id));
-    }
-  }
-
-  await db.insert(timeline).values({
-    planId: id,
-    type: "adjust",
-    description: `Celdas rebalanceadas (modo: ${planData.rebalanceMode})`,
-  });
-
-  return c.json({ success: true, cellsUpdated: pendingCells.length });
-});
-
-// ========== GET /plans/:id/timeline ==========
-routes.get("/:id/timeline", async (c) => {
-  const { id } = c.req.param();
-  const user = c.get("user");
-  const db = getDB(c.env.DB);
-
-  const planData = await db
-    .select()
-    .from(plan)
-    .where(and(eq(plan.id, id), eq(plan.userId, user.id)))
-    .get();
-
-  if (!planData) return c.json({ error: "Plan no encontrado" }, 404);
-
-  const entries = await db
-    .select()
-    .from(timeline)
-    .where(eq(timeline.planId, id))
-    .orderBy(sql`${timeline.date} desc`)
-    .all();
+  const planEntries = await db.select().from(entries).where(eq(entries.planId, planId)).orderBy(entries.date);
 
   return c.json({
-    success: true,
-    timeline: entries.map((t) => ({
-      ...t,
-      amount: t.amount ? Number(t.amount) : null,
-      cellId: t.cellId,
-      createdAt: t.createdAt,
-    })),
+    plan,
+    entries: planEntries,
+    // stats
   });
 });
 
-// ========== POST /plans/:id/timeline ==========
-routes.post("/:id/timeline", sValidator("json", timelineEntrySchema), async (c) => {
-  const { id } = c.req.param();
-  const data = c.req.valid("json");
-  const user = c.get("user");
+// POST /api/plans
+routes.post(
+  "/",
+  // sValidator("json", planCreationSchema),
+  async (c) => {
+    const user = c.get("user");
+    const db = getDB(c.env.DB);
+
+    // validated for middleware sValidator
+    // const data = c.req.valid("json");
+    const data = await validateBody(c, planCreationSchema);
+
+    const now = todayUTC();
+
+    // extra validation
+    const isFlexible = data.mode !== "flexible";
+    if (!isFlexible) {
+      if (!data.goalAmount || !data.endDate || !data.frequencyType) {
+        throw new HTTPException(400, { message: "Meta, fecha límite y frecuencia son obligatorios" });
+      }
+      if (data.frequencyType === "CUSTOM_DAYS" && (!data.customDays || data.customDays.length === 0)) {
+        throw new HTTPException(400, { message: "Selecciona al menos un día" });
+      }
+      const today = now.split("T")[0];
+      if (data.endDate <= today) {
+        throw new HTTPException(400, { message: "La fecha límite debe ser posterior a hoy" });
+      }
+    }
+
+    const [plan] = await db
+      .insert(plans)
+      .values({
+        id: generateId(),
+        userId: user.id,
+        name: data.name,
+        goalAmount: isFlexible ? null : (data.goalAmount ?? null),
+        endDate: isFlexible ? null : (data.endDate ?? null),
+        frequencyType: isFlexible ? "DAILY" : (data.frequencyType as FrequencyType),
+        customDays: data.customDays ? data.customDays : null,
+        suggestedQuota: isFlexible ? null : (data.suggestedQuota ?? null),
+        quickAmounts: data.quickAmounts ? data.quickAmounts : null,
+        isFlexible: isFlexible,
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
+
+    return c.json({ success: true, plan }, 201);
+  },
+);
+
+// PATCH /api/plans/:id — edit plan (meta, endDate, frequency, quickAmounts)
+routes.patch("/:id", async (c) => {
+  const planId = c.req.param("id");
+  if (!planId) throw new HTTPException(400, { message: "ID de plan es requerido" });
+
+  await verifyPlanOwnership(c, planId);
+  const data = await validateBody(c, updatePlanSchema);
+
+  const updateData: PlanUpdate = { updatedAt: todayUTC() } as PlanUpdate;
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.goalAmount !== undefined) updateData.goalAmount = data.goalAmount;
+  if (data.endDate !== undefined) updateData.endDate = data.endDate;
+  if (data.frequencyType !== undefined) updateData.frequencyType = data.frequencyType;
+  if (data.customDays !== undefined) updateData.customDays = data.customDays; // Not JSON.stringify
+  if (data.suggestedQuota !== undefined) updateData.suggestedQuota = data.suggestedQuota;
+  if (data.quickAmounts !== undefined) updateData.quickAmounts = data.quickAmounts; // Not JSON.stringify
+
   const db = getDB(c.env.DB);
-
-  const planData = await db
-    .select()
-    .from(plan)
-    .where(and(eq(plan.id, id), eq(plan.userId, user.id)))
-    .get();
-
-  if (!planData) return c.json({ error: "Plan no encontrado" }, 404);
-
-  await db.insert(timeline).values({
-    planId: id,
-    type: data.type,
-    amount: data.amount ?? null,
-    description: data.description ?? null,
-    date: data.date ?? null,
-  });
-
-  // update currentAmount of plan according to the type
-  let newCurrent = Number(planData.currentAmount);
-  if (data.type === "withdraw" && data.amount) {
-    newCurrent = Math.max(0, newCurrent - data.amount);
-  } else if (data.type === "deposit" && data.amount) {
-    newCurrent = newCurrent + data.amount;
-  }
-
-  if (newCurrent !== Number(planData.currentAmount)) {
-    await db.update(plan).set({ currentAmount: newCurrent }).where(eq(plan.id, id));
-  }
+  await db.update(plans).set(updateData).where(eq(plans.id, planId));
 
   return c.json({ success: true });
 });
 
-// POST /plans/:id/recalc (emergencia)
-// Si el servidor se muere entre el update de celda (un paso intermedio..) y el update de plan (otro paso intermedio), es posible que una celda quede marcada como completed pero el currentAmount del plan no reflejará el nuevo valor.
-routes.post("/:planId/recalc", async (c) => {
-  const planId = c.req.param("planId");
-  const db = getDB(c.env.DB);
-
-  await db
-    .update(plan)
-    .set({
-      currentAmount: sql`(
-			SELECT COALESCE(SUM(amount), 0) FROM ${cell} 
-			WHERE ${cell.planId} = ${planId} AND ${cell.status} = 'completed'
-		)`,
-    })
-    .where(eq(plan.id, planId));
-});
+routes.patch("/:id/archive", (c) => updatePlanStatus(c, "archived"));
+routes.patch("/:id/complete", (c) => updatePlanStatus(c, "completed"));
+routes.patch("/:id/reactivate", (c) => updatePlanStatus(c, "active"));
 
 export default routes;
