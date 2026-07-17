@@ -1,7 +1,6 @@
 import * as v from "valibot";
 
 export const settingsUpdateSchema = v.object({
-  currency: v.pipe(v.string(), v.minLength(1, "La moneda es requerida")),
   language: v.pipe(v.string(), v.minLength(1, "El idioma es requerido")),
   reminderEnabled: v.boolean(),
   achievementNotifs: v.boolean(),

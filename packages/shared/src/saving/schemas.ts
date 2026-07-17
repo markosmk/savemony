@@ -58,6 +58,7 @@ export function validatePlanCreation(data: PlanCreationFormValues): string | nul
     if (data.frequencyType === "CUSTOM_DAYS" && (!data.customDays || data.customDays.length === 0)) {
       return "Selecciona al menos un día de la semana";
     }
+    // const today = todayUTC();
     const today = new Date().toISOString().split("T")[0];
     if (data.endDate <= today) return "La fecha límite debe ser posterior a hoy";
   }
@@ -69,6 +70,22 @@ export function validatePlanCreation(data: PlanCreationFormValues): string | nul
   return null;
 }
 
+export const updatePlanSchema = v.object({
+  name: v.optional(v.string()),
+  goalAmount: v.optional(v.number()),
+  endDate: v.optional(v.string()),
+  frequencyType: v.optional(v.string()),
+  customDays: v.optional(v.array(v.number())),
+  suggestedQuota: v.optional(v.number()),
+  quickAmounts: v.optional(v.array(v.number())),
+});
+
+export type UpdatePlanPayload = v.InferInput<typeof updatePlanSchema>;
+
+/**
+ * Schemas for entries
+ */
+
 export const updateEntrySchema = v.object({
   date: v.pipe(v.string(), v.isoDate()),
   amount: v.number(),
@@ -77,3 +94,18 @@ export const updateEntrySchema = v.object({
 });
 
 export type UpdateEntryPayload = v.InferInput<typeof updateEntrySchema>;
+
+export const depositSchema = v.object({
+  amount: v.pipe(v.number(), v.minValue(1)),
+  date: v.pipe(v.string(), v.isoDate()), // isoDate... yyy-mm-dd
+});
+export type DepositPayload = v.InferInput<typeof depositSchema>;
+
+export const withdrawalSchema = v.object({
+  amount: v.pipe(v.number(), v.minValue(1)),
+  reason: v.pipe(v.string(), v.minLength(1)),
+});
+export type WithdrawalPayload = v.InferInput<typeof withdrawalSchema>;
+
+export const amountSchema = v.object({ amount: v.pipe(v.number(), v.minValue(1)) });
+export type AmountPayload = v.InferInput<typeof amountSchema>;
