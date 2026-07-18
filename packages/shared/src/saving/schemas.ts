@@ -26,7 +26,7 @@ const StructuredPlan = v.object({
 
 const FlexiblePlan = v.object({
   mode: v.literal("flexible"),
-  isFlexible: v.literal(true),
+  // isFlexible: v.literal(true),
   name: nameFieldSchema,
   ...v.partial(basePlanSchema).entries,
 });
@@ -46,7 +46,7 @@ export type StrictPlanValues = v.InferInput<typeof planCreationSchema>;
 // 2. tipo "Form" que permite todos los campos posibles en el ciclo de vida del formulario
 export type PlanCreationFormValues = StrictPlanValues & {
   templateId?: string;
-  isFlexible?: boolean;
+  // isFlexible?: boolean;
 };
 
 // Refinamiento cruzado: si mode es 'structured', estos campos son obligatorios
