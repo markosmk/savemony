@@ -1,6 +1,6 @@
 // import { sValidator } from "@hono/standard-validator";
-import { type FrequencyType, planCreationSchema, todayUTC, updatePlanSchema } from "@savemony/shared";
-import { desc, eq } from "drizzle-orm";
+import { type FrequencyType, getStreakInfo, planCreationSchema, todayUTC, updatePlanSchema } from "@savemony/shared";
+import { and, desc, eq, gt, inArray, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { getDB } from "../db";
@@ -16,8 +16,92 @@ const routes = createProtectedRouter();
 routes.get("/", async (c) => {
   const userId = c.get("user")?.id;
   const db = getDB(c.env.DB);
-  const userPlans = await db.select().from(plans).where(eq(plans.userId, userId)).orderBy(desc(plans.createdAt));
-  return c.json({ plans: userPlans });
+
+  // Query 1: Planes con sumas agregadas
+  const plansData = await db
+    .select({
+      id: plans.id,
+      name: plans.name,
+      status: plans.status,
+      goalAmount: plans.goalAmount,
+      isFlexible: plans.isFlexible,
+      createdAt: plans.createdAt,
+      totalDeposited: sql<number>`COALESCE(SUM(CASE WHEN ${entries.type} = 'deposit' THEN CAST(${entries.amount} AS REAL) ELSE 0 END), 0)`,
+      totalWithdrawn: sql<number>`COALESCE(SUM(CASE WHEN ${entries.type} = 'withdrawal' THEN CAST(${entries.amount} AS REAL) ELSE 0 END), 0)`,
+    })
+    .from(plans)
+    .leftJoin(entries, eq(plans.id, entries.planId))
+    .where(eq(plans.userId, userId))
+    .groupBy(plans.id)
+    .orderBy(desc(plans.createdAt));
+
+  // Query 2: Fechas de depósito únicas por plan (una sola query para todos)
+  const streakData = await db
+    .select({
+      planId: entries.planId,
+      date: entries.date,
+      // Conteo de depósitos por día (para saber si hay al menos uno)
+      count: sql<number>`COUNT(*)`,
+    })
+    .from(entries)
+    .where(
+      and(
+        eq(entries.type, "deposit"),
+        inArray(
+          entries.planId,
+          plansData.map((p) => p.id),
+        ), // un solo WHERE IN
+        gt(entries.amount, 0),
+      ),
+    )
+    .groupBy(entries.planId, entries.date)
+    .orderBy(entries.date);
+
+  // Agrupar fechas por plan
+  const datesByPlan = streakData.reduce(
+    (acc, row) => {
+      if (!acc[row.planId]) acc[row.planId] = [];
+      acc[row.planId].push(row.date);
+      return acc;
+    },
+    {} as Record<string, string[]>,
+  );
+
+  const result = plansData.map((plan) => {
+    const depositDates = datesByPlan[plan.id] || [];
+    const netSaved = Math.max(0, plan.totalDeposited - plan.totalWithdrawn);
+
+    // Streak calculado
+    const streakInfo = getStreakInfo(
+      depositDates.map((d) => ({ date: d, type: "deposit" as const, amount: 1 })) as any,
+    );
+
+    return {
+      id: plan.id,
+      name: plan.name,
+      status: plan.status,
+      goalAmount: plan.goalAmount,
+      isFlexible: plan.isFlexible,
+      createdAt: plan.createdAt,
+      progress: {
+        netSaved,
+        totalDeposited: plan.totalDeposited,
+        totalWithdrawn: plan.totalWithdrawn,
+        percentage:
+          (plan.goalAmount ?? 0) > 0 ? Math.min(100, Math.round((netSaved / (plan.goalAmount ?? 0)) * 100)) : 0,
+        remainingToGoal: Math.max(0, (plan.goalAmount ?? 0) - netSaved),
+        isCompleted: netSaved >= (plan.goalAmount ?? 0),
+      },
+      streak: {
+        current: streakInfo.currentStreak,
+        isActive: streakInfo.isStreakActive,
+        atRisk: streakInfo.streakAtRisk,
+        longest: streakInfo.longestStreak,
+      },
+    };
+  });
+
+  return c.json({ plans: result });
 });
 
 // GET /api/plans/:id
@@ -68,7 +152,7 @@ routes.post(
     const now = todayUTC();
 
     // extra validation
-    const isFlexible = data.mode !== "flexible";
+    const isFlexible = data.mode === "flexible";
     if (!isFlexible) {
       if (!data.goalAmount || !data.endDate || !data.frequencyType) {
         throw new HTTPException(400, { message: "Meta, fecha límite y frecuencia son obligatorios" });
@@ -131,5 +215,46 @@ routes.patch("/:id", async (c) => {
 routes.patch("/:id/archive", (c) => updatePlanStatus(c, "archived"));
 routes.patch("/:id/complete", (c) => updatePlanStatus(c, "completed"));
 routes.patch("/:id/reactivate", (c) => updatePlanStatus(c, "active"));
+
+routes.post("/:id/duplicate", async (c) => {
+  const planId = c.req.param("id");
+  if (!planId) throw new HTTPException(400, { message: "ID de plan es requerido" });
+
+  const plan = await verifyPlanOwnership(c, planId);
+
+  const db = getDB(c.env.DB);
+  const [newPlan] = await db
+    .insert(plans)
+    .values({
+      id: generateId(),
+      userId: c.get("user")?.id,
+      name: `${plan.name} (copia)`,
+      goalAmount: plan.goalAmount,
+      endDate: plan.endDate,
+      frequencyType: plan.frequencyType,
+      customDays: plan.customDays,
+      suggestedQuota: plan.suggestedQuota,
+      quickAmounts: plan.quickAmounts,
+      isFlexible: plan.isFlexible,
+      status: "active",
+    })
+    .returning();
+  return c.json({ success: true, plan: newPlan });
+});
+
+routes.delete("/:id", async (c) => {
+  const planId = c.req.param("id");
+  if (!planId) throw new HTTPException(400, { message: "ID de plan es requerido" });
+
+  const plan = await verifyPlanOwnership(c, planId);
+  if (plan.status !== "archived") {
+    return c.json({ message: "El plan debe estar archivado para ser eliminado" }, 400);
+    // throw new HTTPException(400, { message: "El plan debe estar archivado para ser eliminado" });
+  }
+
+  const db = getDB(c.env.DB);
+  await db.delete(plans).where(eq(plans.id, planId));
+  return c.json({ success: true }); // status 204
+});
 
 export default routes;
