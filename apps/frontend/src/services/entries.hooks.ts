@@ -1,5 +1,6 @@
 import type { EntryDTO, UpdateEntryPayload, WithdrawalPayload } from "@savemony/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { apiRequest } from "./core.api";
 
@@ -76,6 +77,10 @@ export function useAddDeposit(planId: string) {
       queryClient.invalidateQueries({ queryKey: ["entries", planId] });
       queryClient.invalidateQueries({ queryKey: ["plans"] });
       // queryClient.invalidateQueries({ queryKey: ["plans", planId] });
+      toast.success("Monto agregado exitosamente");
+    },
+    onError: () => {
+      toast.error("Error al agregar el monto");
     },
   });
 }

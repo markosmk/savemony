@@ -1,18 +1,14 @@
-import type {
-  Entry,
-  PlanCreationFormValues,
-  PlanDTO,
-  PlanStatus,
-  PlanWithProgress,
-  UpdatePlanPayload,
-} from "@savemony/shared";
+import type { Entry, PlanCreationFormValues, PlanDTO, PlanWithProgress, UpdatePlanPayload } from "@savemony/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 import { apiRequest } from "./core.api";
 
+// corresponde al endpoint..
+type ActionStatus = "archive" | "complete" | "reactivate";
+
 export const plansService = {
-  async getPlans() {
+  async getPlans(): Promise<PlanWithProgress[]> {
     const data = await apiRequest<{ plans: PlanWithProgress[] }>("/api/plans");
     return data.plans;
   },
@@ -42,13 +38,8 @@ export const plansService = {
     });
   },
 
-  async statusPlan(planId: string, status: PlanStatus) {
-    const statusEndpoint: Record<string, PlanStatus> = {
-      archive: "archived",
-      complete: "completed",
-      reactivate: "active",
-    };
-    return await apiRequest<{ success: boolean }>(`/api/plans/${planId}/${statusEndpoint[status]}`, {
+  async statusPlan(planId: string, action: ActionStatus) {
+    return await apiRequest<{ success: boolean }>(`/api/plans/${planId}/${action}`, {
       method: "PATCH",
     });
   },
@@ -117,8 +108,8 @@ export function useUpdatePlan() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdatePlanPayload }) => plansService.updatePlan(id, data),
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["plans", vars.id] });
+    onSuccess: () => {
+      // queryClient.invalidateQueries({ queryKey: ["plans", vars.id] });
       queryClient.invalidateQueries({ queryKey: ["plans"] });
     },
   });
@@ -128,7 +119,7 @@ export function useStatusPlan() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, action }: { id: string; action: PlanStatus }) => plansService.statusPlan(id, action),
+    mutationFn: ({ id, action }: { id: string; action: ActionStatus }) => plansService.statusPlan(id, action),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["plans"] });
     },
