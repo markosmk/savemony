@@ -20,21 +20,27 @@ interface ConfirmStore extends ConfirmState {
   close: (result: boolean) => void;
 }
 
-const useConfirmStoreInternal = create<ConfirmStore>((set, get) => ({
-  isOpen: false,
-  resolve: null,
+const defaultValues: ConfirmOptions = {
   title: "¿Estás seguro?",
   message: "Esta acción no se puede deshacer.",
   confirmText: "Confirmar",
   cancelText: "Cancelar",
   content: null,
   action: undefined,
+};
+
+const useConfirmStoreInternal = create<ConfirmStore>((set, get) => ({
+  isOpen: false,
+  resolve: null,
+  ...defaultValues,
 
   ask: (options) => {
     return new Promise((resolve) => {
       set({
+        // reset defaults first to avoid stale values from previous calls
+        ...defaultValues,
+        // then apply the new options
         ...options,
-        content: options.content ?? null,
         isOpen: true,
         resolve,
       });

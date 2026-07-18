@@ -13,7 +13,7 @@ Este sistema soporta dos flujos de trabajo dependiendo de si tu acción requiere
 ### Patrón 1: Acciones Asíncronas (Mutaciones / API) - RECOMENDADO
 Úsalo cuando vas a modificar la base de datos. El Modal **no se cerrará** automáticamente; mostrará un spinner de carga, evitará clics duplicados y mostrará los errores del servidor si la petición falla.
 
-\`\`\`tsx
+```tsx
 import { useConfirm } from "@/stores/confirm/use-confirm-store";
 import { useDeleteProduct } from "@/hooks/use-products";
 
@@ -36,12 +36,12 @@ export function ProductList() {
 
   return <button onClick={() => handleDelete('123')}>Eliminar</button>;
 }
-\`\`\`
+```
 
 ### Patrón 2: Acciones Síncronas (Estado Local / Navegación)
 Úsalo cuando solo necesitas una respuesta de "Sí/No" para ejecutar código inmediato (limpiar un formulario, navegar a otra ruta).
 
-\`\`\`tsx
+```tsx
 import { useConfirm } from "@/stores/confirm/use-confirm-store";
 import { useRouter } from "next/navigation";
 
@@ -64,7 +64,7 @@ export function Form() {
 
   return <button onClick={handleCancel}>Cancelar</button>;
 }
-\`\`\`
+```
 
 ## Características
 * **Seguridad contra doble clic:** El botón de confirmar se deshabilita mientras `action` se está resolviendo.
