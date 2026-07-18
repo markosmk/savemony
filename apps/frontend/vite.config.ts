@@ -10,10 +10,11 @@ export default defineConfig(() => {
     plugins: [tailwindcss(), tanstackRouter({ target: "react", autoCodeSplitting: true }), react()],
     resolve: {
       tsconfigPaths: true,
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
-        "@savemony/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
-      },
+      // alias: {
+      //   "@": path.resolve(__dirname, "./src"),
+      //   "@savemony/shared/assets": path.resolve(__dirname, "../../packages/shared/src/assets/index.ts"),
+      //   "@savemony/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
+      // },
     },
     server: {
       port: 5173,

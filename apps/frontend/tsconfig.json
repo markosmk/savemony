@@ -1,22 +1,39 @@
 {
-  "compilerOptions": {
-    "strict": true,
-    "target": "ES2022",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
-    "module": "ESNext",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-    "moduleResolution": "bundler",
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "allowJs": true,
-    "jsx": "react-jsx",
-    "paths": {
-      "@/*": ["./src/*"],
-      "@savemony/shared": ["../../packages/shared/src/index.ts"]
-    },
-    "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+	"compilerOptions": {
+		"strict": true,
+		"target": "ES2022",
+		"experimentalDecorators": true,
+		"useDefineForClassFields": false,
+		"module": "ESNext",
+		"lib": [
+			"ES2022",
+			"DOM",
+			"DOM.Iterable"
+		],
+		"skipLibCheck": true,
+		"moduleResolution": "bundler",
+		"isolatedModules": true,
+		"moduleDetection": "force",
+		"allowJs": true,
+		"jsx": "react-jsx",
+		"paths": {
+			"@/*": [
+				"./src/*"
+			],
+			"@savemony/shared/assets": [
+				"../../packages/shared/src/assets/index.ts"
+			],
+			"@savemony/shared/assets/*": [
+				"../../packages/shared/src/assets/*"
+			],
+			"@savemony/shared": [
+				"../../packages/shared/src/index.ts"
+			],
+			"@savemony/shared/*": [
+				"../../packages/shared/src/*"
+			]
+		},
+		"allowImportingTsExtensions": true,
+		"noEmit": true
+	}
 }

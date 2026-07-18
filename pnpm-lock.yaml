@@ -199,6 +199,9 @@ importers:
       dayjs:
         specifier: 1.11.21
         version: 1.11.21
+      lucide-react:
+        specifier: ^1.23.0
+        version: 1.23.0(react@19.2.7)
       valibot:
         specifier: 1.4.2
         version: 1.4.2(typescript@6.0.3)
