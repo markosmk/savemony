@@ -130,6 +130,13 @@ routes.get("/:id/summary", async (c) => {
   const db = getDB(c.env.DB);
   const planEntries = await db.select().from(entries).where(eq(entries.planId, planId)).orderBy(entries.date);
 
+  if (typeof plan.customDays === "string") {
+    plan.customDays = JSON.parse(plan.customDays);
+  }
+  if (typeof plan.quickAmounts === "string") {
+    plan.quickAmounts = JSON.parse(plan.quickAmounts);
+  }
+
   return c.json({
     plan,
     entries: planEntries,
