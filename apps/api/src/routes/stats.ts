@@ -38,10 +38,12 @@ routes.get("/analytics", async (c) => {
 
   // 4. Data Mensual del año actual formateada perfecta para Recharts
   // Agrupa la suma de montos de 'deposits' por año-mes
+  // Depósitos mensuales
   const monthlyDataRawPromise = db
     .select({
       month: sql<string>`strftime('%m', ${entries.date})`,
-      amount: sql<number>`SUM(${entries.amount})`,
+      // amount: sql<number>`SUM(${entries.amount})`,
+      amount: sql<number>`SUM(CAST(${entries.amount} AS REAL))`,
     })
     .from(entries)
     .innerJoin(plans, eq(entries.planId, plans.id))
@@ -55,10 +57,30 @@ routes.get("/analytics", async (c) => {
     .groupBy(sql`strftime('%m', ${entries.date})`)
     .all();
 
-  const [plansStats, savingsStats, monthlyDataRaw] = await Promise.all([
+  // Retiros mensuales
+  const monthlyWithdrawsRawPromise = db
+    .select({
+      month: sql<string>`strftime('%m', ${entries.date})`,
+      // amount: sql<number>`SUM(${entries.amount})`,
+      amount: sql<number>`SUM(CAST(${entries.amount} AS REAL))`,
+    })
+    .from(entries)
+    .innerJoin(plans, eq(entries.planId, plans.id))
+    .where(
+      and(
+        eq(plans.userId, user.id),
+        eq(entries.type, "withdrawal"),
+        sql`strftime('%Y', ${entries.date}) = ${String(currentYear)}`,
+      ),
+    )
+    .groupBy(sql`strftime('%m', ${entries.date})`)
+    .all();
+
+  const [plansStats, savingsStats, monthlyDataRaw, monthlyWithdrawsRaw] = await Promise.all([
     plansStatsPromise,
     savingsStatsPromise,
     monthlyDataRawPromise,
+    monthlyWithdrawsRawPromise,
   ]);
 
   // Forzamos valores numéricos limpios por si la base de datos devuelve null (cuando el usuario es nuevo)
@@ -75,10 +97,12 @@ routes.get("/analytics", async (c) => {
   const monthNames = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
   const monthlyData = monthNames.map((month, index) => {
     const monthNum = String(index + 1).padStart(2, "0");
-    const dbMatch = monthlyDataRaw.find((d) => d.month === monthNum);
+    const depositMatch = monthlyDataRaw.find((d) => d.month === monthNum);
+    const withdrawMatch = monthlyWithdrawsRaw.find((d) => d.month === monthNum);
     return {
       month,
-      amount: dbMatch ? Number(dbMatch.amount) : 0,
+      deposits: depositMatch ? Number(depositMatch.amount) : 0,
+      withdraws: withdrawMatch ? Number(withdrawMatch.amount) : 0,
     };
   });
 
