@@ -19,8 +19,8 @@ export async function apiRequest<T>(url: string, options?: RequestInit): Promise
   });
 
   if (!response.ok) {
-    const errorPayload = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(errorPayload.error || `HTTP request failed: ${response.status}`);
+    const errorPayload = (await response.json().catch(() => ({}))) as { message?: string; error?: string };
+    throw new Error(errorPayload.message || errorPayload.error || `HTTP request failed: ${response.status}`);
   }
 
   return response.json() as Promise<T>;
