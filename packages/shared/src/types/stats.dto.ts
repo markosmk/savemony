@@ -8,7 +8,8 @@ export interface AnalyticsData {
   };
   monthlyData: {
     month: string;
-    amount: number;
+    deposits: number;
+    withdraws: number;
   }[];
 }
 

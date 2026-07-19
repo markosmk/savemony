@@ -30,6 +30,7 @@ export interface CurrentPeriodInfo {
   canDepositToday: boolean;
   blockMessage?: string;
   inputDisabled: boolean; // true en estado Parcial
+  percentage: number; // this period percentage
 }
 
 export interface TotalProgress {
@@ -49,6 +50,7 @@ export interface SmartSuggestion {
 export interface CalendarDay {
   day: number;
   amount: number;
+  withdrawal: number;
   hasDeposit: boolean;
   intensity: number;
 }
@@ -184,6 +186,7 @@ export function getCurrentPeriodInfo(plan: Plan, entries: Entry[], today: ISODat
       message: "Modo flexible: ahorra lo que puedas",
       canDepositToday: true,
       inputDisabled: false,
+      percentage: 0,
     };
   }
 
@@ -205,6 +208,7 @@ export function getCurrentPeriodInfo(plan: Plan, entries: Entry[], today: ISODat
       canDepositToday: false,
       blockMessage: "Hoy no es día hábil. Descansa y ahorra el Lunes",
       inputDisabled: true,
+      percentage: 0,
     };
   }
 
@@ -223,6 +227,7 @@ export function getCurrentPeriodInfo(plan: Plan, entries: Entry[], today: ISODat
       canDepositToday: false,
       blockMessage: "Hoy no es un día de ahorro seleccionado",
       inputDisabled: true,
+      percentage: 0,
     };
   }
 
@@ -255,6 +260,8 @@ export function getCurrentPeriodInfo(plan: Plan, entries: Entry[], today: ISODat
   const netThisPeriod = depositedThisPeriod - withdrawnThisPeriod;
 
   const remaining = Math.max(0, quotaForPeriod - netThisPeriod);
+  // percentage of this period
+  const percentage = Math.min(100, Math.round((netThisPeriod / quotaForPeriod) * 100));
 
   let state: ButtonState;
   let message: string;
@@ -291,6 +298,7 @@ export function getCurrentPeriodInfo(plan: Plan, entries: Entry[], today: ISODat
     message,
     canDepositToday: true,
     inputDisabled,
+    percentage,
   };
 }
 
@@ -358,8 +366,16 @@ export function getCalendarMonthData(entries: Entry[], year: number, month: numb
   const prefix = `${year}-${String(month).padStart(2, "0")}`;
 
   const depositsByDay = new Map<number, number>();
+  const withdrawalsByDay = new Map<number, number>();
+
   for (const entry of entries) {
-    if (entry.type !== "deposit") continue;
+    if (entry.type === "withdrawal") {
+      if (!entry.date.startsWith(prefix)) continue;
+      const day = parseInt(entry.date.split("-")[2], 10);
+      withdrawalsByDay.set(day, (withdrawalsByDay.get(day) || 0) + entry.amount);
+      continue;
+    }
+
     if (!entry.date.startsWith(prefix)) continue;
     const day = parseInt(entry.date.split("-")[2], 10);
     depositsByDay.set(day, (depositsByDay.get(day) || 0) + entry.amount);
@@ -370,9 +386,11 @@ export function getCalendarMonthData(entries: Entry[], year: number, month: numb
   const result: CalendarDay[] = [];
   for (let day = 1; day <= daysInMonth; day++) {
     const amount = depositsByDay.get(day) || 0;
+    const withdrawal = withdrawalsByDay.get(day) || 0;
     result.push({
       day,
       amount,
+      withdrawal,
       hasDeposit: amount > 0,
       intensity: amount > 0 ? Math.min(1, amount / maxAmount) : 0,
     });
