@@ -16,19 +16,18 @@ export interface StreakInfo {
 export interface StreakBadge {
   id: string;
   name: string;
-  icon: string;
   requiredDays: number;
   earned: boolean;
   earnedDate?: ISODate;
 }
 
 const BADGES: Omit<StreakBadge, "earned" | "earnedDate">[] = [
-  { id: "week", name: "Semana de Fuego", icon: "🔥", requiredDays: 7 },
-  { id: "month", name: "Ahorrador del Mes", icon: "📅", requiredDays: 30 },
-  { id: "quarter", name: "Trimestre de Oro", icon: "🏆", requiredDays: 90 },
-  { id: "year", name: "Leyenda del Ahorro", icon: "👑", requiredDays: 365 },
-  { id: "biweek", name: "Quincena Perfecta", icon: "⭐", requiredDays: 14 },
-  { id: "halfyear", name: "Medio Año", icon: "🥈", requiredDays: 180 },
+  { id: "week", name: "Semana de Fuego", requiredDays: 7 },
+  { id: "month", name: "Ahorrador del Mes", requiredDays: 30 },
+  { id: "quarter", name: "Trimestre de Oro", requiredDays: 90 },
+  { id: "year", name: "Leyenda del Ahorro", requiredDays: 365 },
+  { id: "biweek", name: "Quincena Perfecta", requiredDays: 14 },
+  { id: "halfyear", name: "Medio Año", requiredDays: 180 },
 ];
 
 /**
