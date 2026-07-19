@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Loader2Icon } from "lucide-react";
 
 import {
   AlertDialog,
@@ -11,6 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { ButtonLoading } from "@/components/ui/button";
 import { useConfirmStoreInternal } from "./use-confirm-store";
 
 export function ConfirmManager() {
@@ -43,13 +43,12 @@ export function ConfirmManager() {
 
   return (
     <AlertDialog open={isOpen} onOpenChange={(open) => !open && close(false)}>
-      <AlertDialogContent>
+      <AlertDialogContent size="sm">
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription asChild>
-            <div className="mt-2 text-sm text-muted-foreground">
+            <div className="text-sm text-muted-foreground">
               {message}
-
               {error && (
                 <div className="mt-3 p-2 bg-destructive/10 text-destructive rounded-md text-xs font-medium">
                   {error}
@@ -61,6 +60,7 @@ export function ConfirmManager() {
         {content}
         <AlertDialogFooter>
           <AlertDialogCancel
+            variant="secondary"
             disabled={isPending}
             onClick={() => {
               setError(null);
@@ -69,14 +69,9 @@ export function ConfirmManager() {
           >
             {cancelText}
           </AlertDialogCancel>
-          <AlertDialogAction
-            disabled={isPending}
-            onClick={handleConfirm}
-            className="bg-destructive text-white hover:bg-destructive/90"
-          >
-            {isPending ? <Loader2Icon className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {isPending ? "Procesando..." : confirmText}
-          </AlertDialogAction>
+          <ButtonLoading onClick={handleConfirm} variant="destructive" isPending={isPending}>
+            {confirmText}
+          </ButtonLoading>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
