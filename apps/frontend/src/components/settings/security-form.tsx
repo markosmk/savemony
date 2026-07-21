@@ -49,18 +49,20 @@ export function SecurityForm() {
               name="currentPassword"
               render={(field) => <InputPassword {...field} />}
             />
-            <FieldController
-              control={form.control}
-              label="Nueva contraseña"
-              name="newPassword"
-              render={(field) => <InputPassword {...field} />}
-            />
-            <FieldController
-              control={form.control}
-              label="Confirmar nueva contraseña"
-              name="confirmNewPassword"
-              render={(field) => <InputPassword {...field} />}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <FieldController
+                control={form.control}
+                label="Nueva contraseña"
+                name="newPassword"
+                render={(field) => <InputPassword {...field} />}
+              />
+              <FieldController
+                control={form.control}
+                label="Confirmar nueva contraseña"
+                name="confirmNewPassword"
+                render={(field) => <InputPassword {...field} />}
+              />
+            </div>
 
             <ButtonLoading type="submit" isPending={updatePassword.isPending} disabled={!form.formState.isDirty}>
               Actualizar contraseña

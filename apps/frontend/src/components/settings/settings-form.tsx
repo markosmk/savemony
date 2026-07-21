@@ -11,7 +11,6 @@ import { FieldController } from "@/components/ui/field-controller";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { CURRENCIES } from "@/constants/currencies";
 import { useUpdateSettings } from "@/services/settings.hooks";
 
 const LANGUAGES = [
@@ -26,7 +25,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
   const form = useForm<SettingsUpdateInput>({
     resolver: standardSchemaResolver(settingsUpdateSchema),
     defaultValues: {
-      currency: settings.currency ?? "CLP",
+      // currency: settings.currency ?? "CLP",
       language: settings.language ?? "es",
       reminderEnabled: Boolean(settings.reminderEnabled),
       achievementNotifs: Boolean(settings.achievementNotifs),
@@ -59,7 +58,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FieldController
+            {/* <FieldController
               control={form.control}
               name="currency"
               render={(field) => (
@@ -80,7 +79,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
                   </SelectContent>
                 </Select>
               )}
-            />
+            /> */}
 
             <FieldController
               control={form.control}
