@@ -230,13 +230,16 @@ export function getSavingsVelocity(
  * Calcula comparaciones entre períodos
  * @param entries - Entradas de ahorro
  */
-export function getPeriodComparisons(entries: Entry[]): {
+export function getPeriodComparisons(
+  entries: Entry[],
+  referenceDate: string = todayUTC(),
+): {
   thisWeek: ComparisonPeriod;
   lastWeek: ComparisonPeriod;
   thisMonth: ComparisonPeriod;
   lastMonth: ComparisonPeriod;
 } {
-  const todayISO = todayUTC();
+  const todayISO = referenceDate;
 
   // Esta semana (últimos 7 días)
   const thisWeekStart = addDays(todayISO, -6);

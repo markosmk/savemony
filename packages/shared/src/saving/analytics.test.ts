@@ -93,7 +93,8 @@ describe("getPeriodComparisons", () => {
       makeEntry("2026-07-13", 10_000), // esta semana
       makeEntry("2026-07-07", 5_000), // semana pasada
     ];
-    const comp = getPeriodComparisons(entries);
+    // "2026-07-15" como la fecha actual del test:
+    const comp = getPeriodComparisons(entries, "2026-07-15");
     expect(comp.thisWeek.total).toBe(20_000);
     expect(comp.lastWeek.total).toBe(5_000);
     expect(comp.thisWeek.changePercent).toBe(300); // (20-5)/5 = 300%
