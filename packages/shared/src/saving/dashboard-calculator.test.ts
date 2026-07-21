@@ -6,6 +6,7 @@ import {
   formatEntries,
   getCalendarMonthData,
   getCurrentPeriodInfo,
+  getMaxWithdrawableOnDate,
   getSmartSuggestions,
   getTotalProgress,
   getWithdrawalImpact,
@@ -489,5 +490,64 @@ describe("formatEntries", () => {
     expect(formatted[0].date).toBe("2026-07-15");
     expect(formatted[1].date).toBe("2026-07-12");
     expect(formatted[2].date).toBe("2026-07-10");
+  });
+});
+
+describe("getMaxWithdrawableOnDate", () => {
+  it("retorna 0 si la lista de entradas está vacía", () => {
+    const maxAvailable = getMaxWithdrawableOnDate([], "2026-07-20");
+    expect(maxAvailable).toBe(0);
+  });
+
+  it("calcula correctamente solo depósitos", () => {
+    const entries = [
+      makeEntry({ date: "2026-07-18", amount: 56_000, type: "deposit" }),
+      makeEntry({ date: "2026-07-20", amount: 50_000, type: "deposit" }),
+    ];
+
+    const maxAvailable = getMaxWithdrawableOnDate(entries, "2026-07-20");
+    expect(maxAvailable).toBe(106_000);
+  });
+
+  it("descuenta los retiros del saldo total acumulado", () => {
+    const entries = [
+      makeEntry({ date: "2026-07-18", amount: 50_000, type: "deposit" }),
+      makeEntry({ date: "2026-07-19", amount: 10_000, type: "withdrawal" }),
+    ];
+
+    const maxAvailable = getMaxWithdrawableOnDate(entries, "2026-07-20");
+    expect(maxAvailable).toBe(40_000);
+  });
+
+  it("CASO EXACTO DEL BUG: calcula depósitos pasados + depósitos de hoy - múltiples retiros históricos", () => {
+    // Escenario real donde ocurrió el desfase de los $40.578
+    const entries = [
+      makeEntry({ date: "2026-07-18", amount: 56_378, type: "deposit", createdAt: "2026-07-18T10:00:00Z" }),
+      makeEntry({ date: "2026-07-18", amount: 4_000, type: "withdrawal", createdAt: "2026-07-18T11:00:00Z" }),
+      // Múltiples retiros el día 20
+      makeEntry({ date: "2026-07-20", amount: 100, type: "withdrawal", createdAt: "2026-07-20T10:00:00Z" }),
+      makeEntry({ date: "2026-07-20", amount: 200, type: "withdrawal", createdAt: "2026-07-20T11:00:00Z" }),
+      makeEntry({ date: "2026-07-20", amount: 1_300, type: "withdrawal", createdAt: "2026-07-20T12:00:00Z" }),
+      makeEntry({ date: "2026-07-20", amount: 3_000, type: "withdrawal", createdAt: "2026-07-20T13:00:00Z" }),
+      makeEntry({ date: "2026-07-20", amount: 7_200, type: "withdrawal", createdAt: "2026-07-20T14:00:00Z" }),
+      // El depósito gigante que entraba al final
+      makeEntry({ date: "2026-07-20", amount: 50_000, type: "deposit", createdAt: "2026-07-20T15:00:00Z" }),
+    ];
+
+    // Con la función arreglada (ordenando por date y luego por createdAt),
+    // el saldo disponible real debe ser 90.578
+    const maxAvailable = getMaxWithdrawableOnDate(entries, "2026-07-20");
+    expect(maxAvailable).toBe(90_578);
+  });
+
+  it("permite saldo 0 si los retiros superan los depósitos acumulados en un punto de la historia", () => {
+    const entries = [
+      makeEntry({ date: "2026-07-18", amount: 10_000, type: "deposit" }),
+      makeEntry({ date: "2026-07-19", amount: 15_000, type: "withdrawal" }),
+    ];
+
+    const maxAvailable = getMaxWithdrawableOnDate(entries, "2026-07-20");
+    // Math.max(0, minBalance) hace que nunca devuelva negativo, sino 0.
+    expect(maxAvailable).toBe(0);
   });
 });

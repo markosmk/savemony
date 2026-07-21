@@ -166,6 +166,18 @@ export function utcToLocal(utcString: ISODateTime | ISODate, timezone?: string):
 }
 
 /**
+ * Formatea una fecha de negocio (YYYY-MM-DD) sin aplicar desfases de zona horaria.
+ */
+export function formatBusinessDate(
+  dateString: string, // Ej: "2026-07-20"
+  format: string = "dddd, D [de] MMMM [de] YYYY",
+): string {
+  // se agrega T12:00:00, se fuerza que sea el mediodía.
+  // Así, sin importar en qué parte del mundo esté el usuario, seguirá siendo el mismo día.
+  return dayjs(`${dateString}T12:00:00`).format(format);
+}
+
+/**
  * Formatea una fecha UTC para mostrar en la zona del usuario.
  */
 export function formatDate(

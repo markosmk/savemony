@@ -5,7 +5,7 @@ import {
   diffInDaysUTC,
   endOfMonthUTC,
   endOfWeekUTC,
-  formatDate,
+  formatBusinessDate,
   getDayOfWeekUTC,
   getDaysInMonth,
   isWeekdayUTC,
@@ -13,6 +13,13 @@ import {
   startOfWeekUTC,
   todayUTC,
 } from "../utils/date-helpers";
+
+export const REASON_LABELS: Record<string, string> = {
+  emergency: "Emergencia",
+  debt: "Deuda",
+  caprice: "Capricho",
+  other: "Otro",
+};
 
 export type ButtonState = "normal" | "partial" | "completed";
 
@@ -399,6 +406,61 @@ export function getCalendarMonthData(entries: Entry[], year: number, month: numb
 }
 
 /**
+ * Calcula el monto máximo que el usuario podía retirar en una fecha específica
+ * sin haber dejado el saldo en negativo en ningún momento desde esa fecha hasta hoy.
+ */
+export function getMaxWithdrawableOnDate(entries: Entry[], targetDate: string): number {
+  const sortedEntries = [...entries].sort((a, b) => {
+    // 1. Orden Primario: Fecha del movimiento
+    const dateDiff = new Date(a.date).getTime() - new Date(b.date).getTime();
+    // Si son de días distintos, el más antiguo va primero
+    if (dateDiff !== 0) return dateDiff;
+
+    // 2. Orden Secundario: Mismo día -> Depósitos PRIMERO, luego Retiros
+    // Para un mismo día, los depósitos siempre deben procesarse antes que los retiros.
+    // Todos los depósitos del día forman parte del dinero disponible en ese día.
+    if (a.type !== b.type) {
+      return a.type === "deposit" ? -1 : 1;
+    }
+
+    // 3. Orden Terciario: Mismo día y mismo tipo -> Orden de creación (createdAt)
+    const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+    return createdA - createdB;
+  });
+
+  let runningBalance = 0;
+  let minBalanceSinceTarget = Infinity;
+  let reachedTargetDate = false;
+
+  for (const entry of sortedEntries) {
+    // actualizar el saldo corrido
+    if (entry.type === "deposit") {
+      runningBalance += entry.amount;
+    } else if (entry.type === "withdrawal") {
+      runningBalance -= entry.amount;
+    }
+
+    // Si la entrada es igual o posterior a la fecha donde queremos retirar
+    if (entry.date >= targetDate) {
+      reachedTargetDate = true;
+      if (runningBalance < minBalanceSinceTarget) {
+        minBalanceSinceTarget = runningBalance;
+      }
+    }
+  }
+
+  // Si no hay entradas en o después de targetDate, o la fecha es futura
+  if (!reachedTargetDate) {
+    return Math.max(0, runningBalance);
+  }
+
+  // max para evitar numeros negativos
+  return Math.max(0, minBalanceSinceTarget);
+}
+
+/**
  * HISTORIAL
  */
 
@@ -413,19 +475,47 @@ export interface FormattedEntry {
 }
 /** Formato de entradas del historial */
 export function formatEntries(entries: Entry[], today: ISODate = todayUTC()): FormattedEntry[] {
-  return entries
-    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
-    .map((entry) => ({
-      id: entry.id,
-      date: entry.date,
-      displayDate: formatDate(entry.date),
-      amount: entry.amount,
-      type: entry.type,
-      reason: entry.reason,
-      // isRecent: diffInDaysUTC(entry.date, today) >= 0 && diffInDaysUTC(entry.date, today) <= 7,
-      // isRecent solo para fechas pasadas (no futuras), máximo 7 días atrás
-      isRecent: entry.date <= today && diffInDaysUTC(entry.date, today) >= 0 && diffInDaysUTC(entry.date, today) <= 7,
-    }));
+  return [...entries]
+    .sort((a, b) => {
+      // 1. Ordenamiento Primario: Fecha del movimiento (Business Date)
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+
+      const dateDiff = dateB - dateA;
+
+      // Si son de días diferentes, el más reciente gana (descendente)
+      if (dateDiff !== 0) {
+        return dateDiff;
+      }
+
+      // 2. Ordenamiento Secundario (Desempate): Si son del mismo día, ordenamos por createdAt
+      const createdA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+      return createdB - createdA;
+    })
+
+    .map((entry) => {
+      // Si existe reason, buscamos su traducción. Si no está en el diccionario, es una razón personalizada de texto libre.
+      const displayReason = entry.reason ? REASON_LABELS[entry.reason] || entry.reason : null;
+      const differenceDays = diffInDaysUTC(entry.date, today);
+
+      return {
+        id: entry.id,
+        date: entry.date,
+        createdAt: entry.createdAt,
+        displayDate: formatBusinessDate(entry.date),
+        amount: entry.amount,
+        type: entry.type,
+        reason: displayReason,
+        // v1: no considera fechas futuras
+        // isRecent: diffInDaysUTC(entry.date, today) >= 0 && diffInDaysUTC(entry.date, today) <= 7,
+        // v2: solo para fechas pasadas (no futuras), máximo 7 días atrás
+        // isRecent: entry.date <= today && diffInDaysUTC(entry.date, today) >= 0 && diffInDaysUTC(entry.date, today) <= 7,
+        // v3: Corregido para usar createdAt de forma segura y detectar si es de los últimos 7 días
+        isRecent: entry.date <= today && differenceDays >= 0 && differenceDays <= 7,
+      };
+    });
 }
 
 /** Impacto del retiro de fondos */
