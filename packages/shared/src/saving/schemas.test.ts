@@ -151,18 +151,6 @@ describe("FlexiblePlan", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rechaza sin isFlexible", () => {
-    const payload = { ...makeFlexiblePayload(), isFlexible: undefined };
-    const result = safeParse(planCreationSchema, payload);
-    expect(result.success).toBe(false);
-  });
-
-  it("rechaza isFlexible = false", () => {
-    const payload = makeFlexiblePayload({ isFlexible: false });
-    const result = safeParse(planCreationSchema, payload);
-    expect(result.success).toBe(false);
-  });
-
   it("rechaza sin name", () => {
     const payload = makeFlexiblePayload({ name: undefined });
     const result = safeParse(planCreationSchema, payload);

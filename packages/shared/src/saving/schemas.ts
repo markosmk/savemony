@@ -101,10 +101,28 @@ export const depositSchema = v.object({
 });
 export type DepositPayload = v.InferInput<typeof depositSchema>;
 
-export const withdrawalSchema = v.object({
-  amount: v.pipe(v.number(), v.minValue(1)),
-  reason: v.pipe(v.string(), v.minLength(1)),
-});
+export const withdrawalSchema = v.pipe(
+  v.object({
+    amount: v.pipe(v.number(), v.minValue(1, "El monto debe ser mayor a 0")),
+    reason: v.pipe(v.string(), v.minLength(1, "Selecciona un motivo")),
+    date: v.pipe(v.string(), v.isoDate("Fecha inválida")), // isoDate... yyy-mm-dd
+    customReason: v.optional(v.string()),
+  }),
+  // Validación cruzada: Si reason es "other", customReason debe existir y no estar vacío
+  v.forward(
+    v.partialCheck(
+      [["reason"], ["customReason"]],
+      (input) => {
+        if (input.reason === "other") {
+          return !!input.customReason && input.customReason.trim().length > 0;
+        }
+        return true;
+      },
+      "Debes especificar el motivo de tu retiro",
+    ),
+    ["customReason"],
+  ),
+);
 export type WithdrawalPayload = v.InferInput<typeof withdrawalSchema>;
 
 export const amountSchema = v.object({ amount: v.pipe(v.number(), v.minValue(1)) });
