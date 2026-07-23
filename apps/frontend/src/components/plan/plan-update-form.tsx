@@ -24,7 +24,6 @@ export function PlanUpdateForm({ initialValues, onCancel }: { initialValues: Pla
       customDays: initialValues.customDays ?? [],
       suggestedQuota: initialValues.suggestedQuota ?? 0,
       quickAmounts: initialValues.quickAmounts ?? [],
-      // isFlexible: initialValues.isFlexible,
     },
   });
 

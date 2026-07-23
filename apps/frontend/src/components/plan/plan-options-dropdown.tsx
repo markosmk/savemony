@@ -1,5 +1,12 @@
 import type { Plan } from "@savemony/shared";
-import { ArchiveIcon, ArchiveRestoreIcon, EllipsisVerticalIcon, SquarePenIcon, Trash2Icon } from "lucide-react";
+import {
+  AlertCircleIcon,
+  ArchiveIcon,
+  ArchiveRestoreIcon,
+  EllipsisVerticalIcon,
+  SquarePenIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,6 +33,23 @@ export function PlanOptionsDropdown({ plan }: { plan: Plan }) {
     confirm({
       title: "Archivar Plan",
       message: "¿Estás seguro de que quieres archivar este plan?",
+      content: (
+        <>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-950/30">
+            <div className="flex items-start gap-2">
+              <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+                <p className="font-semibold">¿Qué significa archivar?</p>
+                <ul className="mt-1 space-y-1 list-disc ml-3">
+                  <li>El plan se ocultará de tu lista principal</li>
+                  <li>Todos los datos y progreso se conservarán</li>
+                  <li>Puedes restaurarlo cuando quieras</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </>
+      ),
       action: async () => {
         await mutateStatusPlan.mutateAsync({ id: plan.id, action: "archive" });
         toast.success("Plan Archivado");
