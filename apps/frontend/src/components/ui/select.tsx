@@ -158,7 +158,7 @@ interface SelectInputProps extends React.ComponentProps<typeof Select> {
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
-  classTrigger?: string;
+  className?: string;
   renderItem?: (option: SelectInputOption) => React.ReactNode;
   disabled?: boolean;
   "aria-invalid"?: boolean;
@@ -172,7 +172,7 @@ function SelectInput({
   value,
   onValueChange,
   placeholder,
-  classTrigger,
+  className,
   disabled = false,
   "aria-invalid": ariaInvalid,
   ...props
@@ -189,7 +189,7 @@ function SelectInput({
     <Select value={value} onValueChange={onValueChange} {...props}>
       <SelectTrigger
         id={id}
-        className={cn("w-full min-w-20", classTrigger)}
+        className={cn("w-full min-w-20", className)}
         aria-invalid={ariaInvalid}
         disabled={disabled || options.length === 0}
       >

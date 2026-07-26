@@ -165,6 +165,7 @@ type CalendarInputProps = Omit<React.ComponentProps<typeof DayPicker>, "mode"> &
   value?: string; // ISO string (ej: "2026-07-13")
   onChange?: (value: string) => void; // ISO string o vacío
   placeholder?: string;
+  "aria-invalid"?: boolean;
 };
 
 function CalendarInput({ value, onChange, placeholder = "Selecciona fecha", ...props }: CalendarInputProps) {
@@ -186,12 +187,13 @@ function CalendarInput({ value, onChange, placeholder = "Selecciona fecha", ...p
         <Button
           variant="outline"
           className={cn(
-            "min-w-[240px] h-10 border-input justify-start text-left font-normal",
+            "min-w-0 h-10 border-input justify-start text-left font-normal",
             !date && "text-muted-foreground",
           )}
+          aria-invalid={props["aria-invalid"]}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? formatDate(date, "DD [de] MMMM, YYYY") : <span>{placeholder}</span>}
+          <CalendarIcon className="size-4 shrink-0" />
+          <span className="truncate">{date ? formatDate(date, "DD [de] MMMM, YYYY") : <span>{placeholder}</span>}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

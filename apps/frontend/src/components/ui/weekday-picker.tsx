@@ -6,14 +6,14 @@ interface WeekdayPickerProps {
   onChange?: (value: number[]) => void;
 }
 
-const DAYS = [
-  { value: 1, label: "Lun", fullName: "Lunes" },
-  { value: 2, label: "Mar", fullName: "Martes" },
-  { value: 3, label: "Mié", fullName: "Miércoles" },
-  { value: 4, label: "Jue", fullName: "Jueves" },
-  { value: 5, label: "Vie", fullName: "Viernes" },
-  { value: 6, label: "Sáb", fullName: "Sábado" },
-  { value: 0, label: "Dom", fullName: "Domingo" },
+export const DAYS = [
+  { value: 1, label: "L", labelMid: "Lun", fullName: "Lunes" },
+  { value: 2, label: "M", labelMid: "Mar", fullName: "Martes" },
+  { value: 3, label: "M", labelMid: "Mié", fullName: "Miércoles" },
+  { value: 4, label: "J", labelMid: "Jue", fullName: "Jueves" },
+  { value: 5, label: "V", labelMid: "Vie", fullName: "Viernes" },
+  { value: 6, label: "S", labelMid: "Sáb", fullName: "Sábado" },
+  { value: 0, label: "D", labelMid: "Dom", fullName: "Domingo" },
 ];
 
 export function WeekdayPicker({ value = [], onChange }: WeekdayPickerProps) {
@@ -40,7 +40,7 @@ export function WeekdayPicker({ value = [], onChange }: WeekdayPickerProps) {
             onPressedChange={(pressed) => {
               handleToggle(day.value, pressed);
             }}
-            className="h-10 w-14 p-0 rounded-full font-medium transition-all bg-muted active:scale-95 data-[state=on]:bg-primary"
+            className="h-10 w-10 p-0 rounded-full font-medium transition-all active:scale-95" //data-[state=on]:bg-primary
             title={day.fullName}
           >
             {day.label}
