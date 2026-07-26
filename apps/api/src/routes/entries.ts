@@ -1,4 +1,11 @@
-import { amountSchema, depositSchema, nowUTC, todayUTC, withdrawalSchema } from "@savemony/shared";
+import {
+  amountSchema,
+  depositSchema,
+  getMaxWithdrawableOnDate,
+  nowUTC,
+  todayUTC,
+  withdrawalSchema,
+} from "@savemony/shared";
 import { and, desc, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
@@ -72,6 +79,7 @@ routes.post("/deposit", async (c) => {
   return c.json({ success: true, entry }, 201);
 });
 
+// Rule: Un retiro registrado en la fecha $T$ por un monto $M$ solo es válido si el saldo disponible desde la fecha $T$ hasta hoy NUNCA cae por debajo de $M$.
 // POST /api/plans/:planId/entries/withdrawal
 routes.post("/withdrawal", async (c) => {
   const planId = c.req.param("planId");
@@ -83,27 +91,37 @@ routes.post("/withdrawal", async (c) => {
   const now = nowUTC();
 
   const db = getDB(c.env.DB);
+
   // verify that the withdrawal amount not exceeds the net saved amount
   const allEntries = await db.select().from(entries).where(eq(entries.planId, planId));
-
-  const totalDeposited = allEntries.filter((e) => e.type === "deposit").reduce((sum, e) => sum + e.amount, 0);
-  const totalWithdrawn = allEntries.filter((e) => e.type === "withdrawal").reduce((sum, e) => sum + e.amount, 0);
-  const netSaved = totalDeposited - totalWithdrawn;
-
-  if (data.amount > netSaved) {
-    throw new HTTPException(400, { message: "No puedes retirar más de lo que has ahorrado" });
+  const maxAllowed = getMaxWithdrawableOnDate(allEntries, data.date);
+  if (data.amount > maxAllowed) {
+    throw new HTTPException(400, {
+      message: `No puedes retirar $${data.amount} en esa fecha. El máximo disponible en esa fecha era $${maxAllowed}.`,
+    });
   }
+
+  // const totalDeposited = allEntries.filter((e) => e.type === "deposit").reduce((sum, e) => sum + e.amount, 0);
+  // const totalWithdrawn = allEntries.filter((e) => e.type === "withdrawal").reduce((sum, e) => sum + e.amount, 0);
+  // const netSaved = totalDeposited - totalWithdrawn;
+
+  // if (data.amount > netSaved) {
+  //   throw new HTTPException(400, { message: "No puedes retirar más de lo que has ahorrado" });
+  // }
+
+  // Unificamos el motivo: Si es 'other', guardamos el customReason en la DB.
+  // Si es 'emergency' o 'debt', guardamos ese valor tal cual.
+  const finalReason = data.reason === "other" && data.customReason ? data.customReason.trim() : data.reason;
 
   const [entry] = await db
     .insert(entries)
     .values({
       id: generateId(),
       planId,
-      // date: formatDate(now),
-      date: todayUTC(),
+      date: data.date, // || todayUTC(),
       amount: data.amount,
       type: "withdrawal",
-      reason: data.reason,
+      reason: finalReason,
       createdAt: now,
     })
     .returning();
