@@ -128,7 +128,11 @@ routes.get("/:id/summary", async (c) => {
   const plan = await verifyPlanOwnership(c, planId);
 
   const db = getDB(c.env.DB);
-  const planEntries = await db.select().from(entries).where(eq(entries.planId, planId)).orderBy(entries.date);
+  const planEntries = await db
+    .select()
+    .from(entries)
+    .where(eq(entries.planId, planId))
+    .orderBy(desc(entries.createdAt));
 
   if (typeof plan.customDays === "string") {
     plan.customDays = JSON.parse(plan.customDays);
